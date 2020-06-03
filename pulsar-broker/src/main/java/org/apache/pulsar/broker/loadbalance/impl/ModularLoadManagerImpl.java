@@ -150,7 +150,7 @@ public class ModularLoadManagerImpl implements ModularLoadManager, ZooKeeperCach
     private SimpleResourceAllocationPolicies policies;
 
     // Pulsar service used to initialize this.
-    private PulsarService pulsar;
+    protected PulsarService pulsar;
 
     // Executor service used to regularly update broker data.
     private final ScheduledExecutorService scheduler;

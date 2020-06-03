@@ -1,14 +1,21 @@
 package org.apache.pulsar.broker.loadbalance.impl;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.val;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.pulsar.broker.OverallBandwidthBrokerData;
+import org.apache.pulsar.broker.PulsarServerException;
 import org.apache.pulsar.broker.loadbalance.BillingData;
+import org.apache.pulsar.client.api.Producer;
+import org.apache.pulsar.client.api.PulsarClientException;
+
+import java.util.Optional;
 
 public class ModularLoadManagerWithBillingImpl extends ModularLoadManagerImpl {
     private final BillingData billingData;
+    private Producer<byte[]> logProducer = null;
 
-    // Path to ZNode containing BillingData jsons for each broker.
-    public static final String BILLING_DATA_BROKER_ZPATH = "/loadbalance/billing-data";
+    public static final String BILLING_DATA_TOPIC = "non-persistent://public/default/billing_data";
 
     public ModularLoadManagerWithBillingImpl() {
         super();
@@ -20,9 +27,9 @@ public class ModularLoadManagerWithBillingImpl extends ModularLoadManagerImpl {
 
         // Iterate over the broker data and update the bandwidth counters for the billing.
         loadData.getBrokerData().forEach((broker, value) -> {
-                val overallBandWidthForBroker = bandwidthData.getOrDefault(broker, new OverallBandwidthBrokerData());
-                overallBandWidthForBroker.update(value.getLocalData());
-                bandwidthData.put(broker, overallBandWidthForBroker);
+            val overallBandWidthForBroker = bandwidthData.getOrDefault(broker, new OverallBandwidthBrokerData());
+            overallBandWidthForBroker.update(value.getLocalData());
+            bandwidthData.put(broker, overallBandWidthForBroker);
         });
     }
 
@@ -33,18 +40,24 @@ public class ModularLoadManagerWithBillingImpl extends ModularLoadManagerImpl {
     public void writeBundleDataOnZooKeeper() {
         super.writeBundleDataOnZooKeeper();
         updateBillingData();
-        billingData.getBandwidthData().forEach((broker, data) -> {
-            try {
-                final String zooKeeperPath = BILLING_DATA_BROKER_ZPATH + "/" + broker;
-                createZPathIfNotExists(zkClient, zooKeeperPath);
-                zkClient.setData(zooKeeperPath, data.getJsonBytes(), -1);
-                if (log.isDebugEnabled()) {
-                    log.debug("Writing billing data report {}", data);
-                }
-            } catch (Exception e) {
-                log.warn("Error when writing billing data for {} to ZooKeeper: {}", broker, e);
-            }
-        });
+        try {
+            publishToBillingTopic(billingData);
+        } catch (JsonProcessingException e) {
+            log.error("failed to publish data on log topic", e);
+        }
+    }
 
+    private void publishToBillingTopic(final BillingData billingData) throws JsonProcessingException {
+        this.logProducer = Optional.ofNullable(logProducer)
+                .orElseGet(() -> {
+                    try {
+                        return this.pulsar.getClient().newProducer()
+                                .topic(BILLING_DATA_TOPIC)
+                                .create();
+                    } catch (PulsarClientException | PulsarServerException e) {
+                        throw new RuntimeException(e);
+                    }
+                });
+        this.logProducer.sendAsync(billingData.getJsonBytes());
     }
 }

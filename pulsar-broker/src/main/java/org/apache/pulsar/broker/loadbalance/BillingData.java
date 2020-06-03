@@ -21,6 +21,7 @@ package org.apache.pulsar.broker.loadbalance;
 import org.apache.pulsar.broker.BrokerData;
 import org.apache.pulsar.broker.BundleData;
 import org.apache.pulsar.broker.OverallBandwidthBrokerData;
+import org.apache.pulsar.policies.data.loadbalancer.JSONWritable;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -28,7 +29,7 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * This class represents all data that is required for billing.
  */
-public class BillingData {
+public class BillingData extends JSONWritable {
     /**
      * Map from broker names to their available data.
      */
