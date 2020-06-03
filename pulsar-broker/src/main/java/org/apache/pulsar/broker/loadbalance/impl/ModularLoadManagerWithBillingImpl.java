@@ -12,17 +12,16 @@ import org.apache.pulsar.client.api.PulsarClientException;
 import java.util.Optional;
 
 public class ModularLoadManagerWithBillingImpl extends ModularLoadManagerImpl {
-    private final BillingData billingData;
     private Producer<byte[]> logProducer = null;
 
     public static final String BILLING_DATA_TOPIC = "non-persistent://public/default/billing_data";
 
     public ModularLoadManagerWithBillingImpl() {
         super();
-        this.billingData = new BillingData();
     }
 
-    private void updateBillingData() {
+    private BillingData getBillingData() {
+        val billingData = new BillingData();
         val bandwidthData = billingData.getBandwidthData();
 
         // Iterate over the broker data and update the bandwidth counters for the billing.
@@ -31,6 +30,8 @@ public class ModularLoadManagerWithBillingImpl extends ModularLoadManagerImpl {
             overallBandWidthForBroker.update(value.getLocalData());
             bandwidthData.put(broker, overallBandWidthForBroker);
         });
+
+        return billingData;
     }
 
     /**
@@ -39,9 +40,8 @@ public class ModularLoadManagerWithBillingImpl extends ModularLoadManagerImpl {
     @Override
     public void writeBundleDataOnZooKeeper() {
         super.writeBundleDataOnZooKeeper();
-        updateBillingData();
         try {
-            publishToBillingTopic(billingData);
+            publishToBillingTopic(getBillingData());
         } catch (JsonProcessingException e) {
             log.error("failed to publish data on log topic", e);
         }
