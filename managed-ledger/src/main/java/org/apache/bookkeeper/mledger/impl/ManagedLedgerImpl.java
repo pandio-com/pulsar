@@ -68,6 +68,7 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+import org.apache.bookkeeper.client.AsyncCallback;
 import org.apache.bookkeeper.client.AsyncCallback.CreateCallback;
 import org.apache.bookkeeper.client.AsyncCallback.OpenCallback;
 import org.apache.bookkeeper.client.BKException;
@@ -88,6 +89,7 @@ import org.apache.bookkeeper.mledger.AsyncCallbacks.OffloadCallback;
 import org.apache.bookkeeper.mledger.AsyncCallbacks.OpenCursorCallback;
 import org.apache.bookkeeper.mledger.AsyncCallbacks.ReadEntriesCallback;
 import org.apache.bookkeeper.mledger.AsyncCallbacks.ReadEntryCallback;
+import org.apache.bookkeeper.mledger.AsyncCallbacks.SetPropertiesCallback;
 import org.apache.bookkeeper.mledger.AsyncCallbacks.TerminateCallback;
 import org.apache.bookkeeper.mledger.Entry;
 import org.apache.bookkeeper.mledger.ManagedCursor;
@@ -109,6 +111,7 @@ import org.apache.bookkeeper.mledger.Position;
 import org.apache.bookkeeper.mledger.impl.ManagedCursorImpl.VoidCallback;
 import org.apache.bookkeeper.mledger.impl.MetaStore.MetaStoreCallback;
 import org.apache.bookkeeper.mledger.offload.OffloadUtils;
+import org.apache.bookkeeper.mledger.proto.MLDataFormats;
 import org.apache.bookkeeper.mledger.proto.MLDataFormats.ManagedLedgerInfo;
 import org.apache.bookkeeper.mledger.proto.MLDataFormats.ManagedLedgerInfo.LedgerInfo;
 import org.apache.bookkeeper.mledger.proto.MLDataFormats.NestedPositionInfo;
@@ -133,6 +136,7 @@ public class ManagedLedgerImpl implements ManagedLedger, CreateCallback {
     private final BookKeeper.DigestType digestType;
 
     protected ManagedLedgerConfig config;
+    protected Map<String, String> propertiesMap;
     protected final MetaStore store;
 
     private final ConcurrentLongHashMap<CompletableFuture<ReadHandle>> ledgerCache = new ConcurrentLongHashMap<>(
@@ -280,6 +284,7 @@ public class ManagedLedgerImpl implements ManagedLedger, CreateCallback {
         // Get the next rollover time. Add a random value upto 5% to avoid rollover multiple ledgers at the same time
         this.maximumRolloverTimeMs = (long) (config.getMaximumRolloverTimeMs() * (1 + random.nextDouble() * 5 / 100.0));
         this.mlOwnershipChecker = mlOwnershipChecker;
+        this.propertiesMap = Maps.newHashMap();
     }
 
     synchronized void initialize(final ManagedLedgerInitializeLedgerCallback callback, final Object ctx) {
@@ -298,6 +303,14 @@ public class ManagedLedgerImpl implements ManagedLedger, CreateCallback {
 
                 for (LedgerInfo ls : mlInfo.getLedgerInfoList()) {
                     ledgers.put(ls.getLedgerId(), ls);
+                }
+
+                if (mlInfo.getPropertiesCount() > 0) {
+                    propertiesMap = Maps.newHashMap();
+                    for (int i = 0; i < mlInfo.getPropertiesCount(); i++) {
+                        MLDataFormats.KeyValue property = mlInfo.getProperties(i);
+                        propertiesMap.put(property.getKey(), property.getValue());
+                    }
                 }
 
                 // Last ledger stat may be zeroed, we must update it
@@ -881,6 +894,7 @@ public class ManagedLedgerImpl implements ManagedLedger, CreateCallback {
      * @return true if at least a cursor exists
      */
     public boolean hasActiveCursors() {
+        // Use hasCursors instead of isEmpty because isEmpty does not take into account non-durable cursors
         return !activeCursors.isEmpty();
     }
 
@@ -1376,6 +1390,38 @@ public class ManagedLedgerImpl implements ManagedLedger, CreateCallback {
             this.lastLedgerCreationInitiationTimestamp = System.nanoTime();
             mbean.startDataLedgerCreateOp();
             asyncCreateLedger(bookKeeper, config, digestType, this, Collections.emptyMap());
+        }
+    }
+
+    synchronized void createLedgerAfterClosed() {
+        STATE_UPDATER.set(this, State.CreatingLedger);
+        this.lastLedgerCreationInitiationTimestamp = System.nanoTime();
+        mbean.startDataLedgerCreateOp();
+        asyncCreateLedger(bookKeeper, config, digestType, this, Collections.emptyMap());
+    }
+
+    @Override
+    public void rollCurrentLedgerIfFull() {
+        log.info("[{}] Start checking if current ledger is full", name);
+        if (currentLedgerEntries > 0 && currentLedgerIsFull()) {
+            STATE_UPDATER.set(this, State.ClosingLedger);
+            currentLedger.asyncClose(new AsyncCallback.CloseCallback() {
+                @Override
+                public void closeComplete(int rc, LedgerHandle lh, Object o) {
+                    checkArgument(currentLedger.getId() == lh.getId(), "ledgerId %s doesn't match with acked ledgerId %s",
+                            currentLedger.getId(),
+                            lh.getId());
+
+                    if (rc == BKException.Code.OK) {
+                        log.debug("Successfuly closed ledger {}", lh.getId());
+                    } else {
+                        log.warn("Error when closing ledger {}. Status={}", lh.getId(), BKException.getMessage(rc));
+                    }
+
+                    ledgerClosed(lh);
+                    createLedgerAfterClosed();
+                }
+            }, System.nanoTime());
         }
     }
 
@@ -1953,7 +1999,7 @@ public class ManagedLedgerImpl implements ManagedLedger, CreateCallback {
             }
 
             long slowestReaderLedgerId = -1;
-            if (cursors.isEmpty()) {
+            if (!cursors.hasDurableCursors()) {
                 // At this point the lastLedger will be pointing to the
                 // ledger that has just been closed, therefore the +1 to
                 // include lastLedger in the trimming.
@@ -2866,7 +2912,7 @@ public class ManagedLedgerImpl implements ManagedLedger, CreateCallback {
         synchronized (activeCursors) {
             if (activeCursors.get(cursor.getName()) != null) {
                 activeCursors.removeCursor(cursor.getName());
-                if (activeCursors.isEmpty()) {
+                if (!activeCursors.hasDurableCursors()) {
                     // cleanup cache if there is no active subscription
                     entryCache.clear();
                 } else {
@@ -3172,6 +3218,67 @@ public class ManagedLedgerImpl implements ManagedLedger, CreateCallback {
         }
 
         return offloadedSize;
+    }
+
+    @Override
+    public Map<String, String> getProperties() {
+        return propertiesMap;
+    }
+
+    @Override
+    public void setProperties(Map<String, String> properties) throws InterruptedException {
+        final CountDownLatch latch = new CountDownLatch(1);
+        this.asyncSetProperties(properties, new SetPropertiesCallback() {
+            @Override
+            public void setPropertiesComplete(Map<String, String> properties, Object ctx) {
+                latch.countDown();
+            }
+
+            @Override
+            public void setPropertiesFailed(ManagedLedgerException exception, Object ctx) {
+                log.error("[{}] Update manageLedger's info failed:{}", name, exception.getMessage());
+                latch.countDown();
+            }
+        }, null);
+
+        latch.await();
+    }
+
+    @Override
+    public void asyncSetProperties(Map<String, String> properties, final SetPropertiesCallback callback, Object ctx) {
+        store.getManagedLedgerInfo(name, false, new MetaStoreCallback<ManagedLedgerInfo>() {
+            @Override
+            public void operationComplete(ManagedLedgerInfo result, Stat version) {
+                ledgersStat = version;
+                // Update manageLedger's  properties.
+                ManagedLedgerInfo.Builder info = ManagedLedgerInfo.newBuilder(result);
+                info.clearProperties();
+                for (Map.Entry<String, String> property : properties.entrySet()) {
+                    info.addProperties(MLDataFormats.KeyValue.newBuilder().setKey(property.getKey()).setValue(property.getValue()));
+                }
+                store.asyncUpdateLedgerIds(name, info.build(), version, new MetaStoreCallback<Void>() {
+                    @Override
+                    public void operationComplete(Void result, Stat version) {
+                        ledgersStat = version;
+                        propertiesMap.clear();
+                        propertiesMap.putAll(properties);
+                        callback.setPropertiesComplete(properties, ctx);
+                    }
+
+                    @Override
+                    public void operationFailed(MetaStoreException e) {
+                        log.error("[{}] Update manageLedger's info failed:{}", name, e.getMessage());
+                        callback.setPropertiesFailed(e, ctx);
+                    }
+                });
+            }
+
+            @Override
+            public void operationFailed(MetaStoreException e) {
+                log.error("[{}] Get manageLedger's info failed:{}", name, e.getMessage());
+                callback.setPropertiesFailed(e, ctx);
+            }
+        });
     }
 
     @VisibleForTesting
