@@ -157,7 +157,7 @@ public class ModularLoadManagerImpl implements ModularLoadManager, ZooKeeperCach
     private LocalBrokerData localData;
 
     // Load data comprising data available for each broker.
-    private final LoadData loadData;
+    protected final LoadData loadData;
 
     // Used to determine whether a bundle is preallocated.
     private final Map<String, String> preallocatedBundleToBroker;
@@ -175,7 +175,7 @@ public class ModularLoadManagerImpl implements ModularLoadManager, ZooKeeperCach
     private final ScheduledExecutorService scheduler;
 
     // ZooKeeper belonging to the pulsar service.
-    private ZooKeeper zkClient;
+    protected ZooKeeper zkClient;
 
     // check if given broker can load persistent/non-persistent topic
     private final BrokerTopicLoadingPredicate brokerTopicLoadingPredicate;
@@ -289,7 +289,7 @@ public class ModularLoadManagerImpl implements ModularLoadManager, ZooKeeperCach
     }
 
     // Attempt to create a ZooKeeper path if it does not exist.
-    private static void createZPathIfNotExists(final ZooKeeper zkClient, final String path) throws Exception {
+    protected static void createZPathIfNotExists(final ZooKeeper zkClient, final String path) throws Exception {
         if (zkClient.exists(path, false) == null) {
             try {
                 ZkUtils.createFullPathOptimistic(zkClient, path, new byte[0], ZooDefs.Ids.OPEN_ACL_UNSAFE,
