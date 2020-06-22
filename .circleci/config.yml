@@ -1,0 +1,84 @@
+aliases:
+  - &restore-cache
+    keys:
+      - caching-dependencies-{{ .Branch }}-{{ checksum "pom.xml" }}
+      - caching-dependencies-{{ .Branch }}-
+
+  - &save-cache
+    paths:
+      - ./distribution
+    key: caching-dependencies-{{ .Branch }}-{{ checksum "pom.xml" }}
+
+version: 2
+jobs:
+  push_image:
+    docker:
+      - image: improwised/jdk8-build:v1
+
+    working_directory: ~/repo
+    environment:
+      - GOOGLE_PROJECT_ID: asyncro-152302
+      - GOOGLE_COMPUTE_ZONE: us-central1
+
+    steps:
+      - setup_remote_docker
+
+      - checkout
+
+      - restore_cache: *restore-cache
+
+      - run:
+          name: build jar files & create tarball
+          # command: |
+          #   mvn clean install -DskipTests
+          command: |
+            mvn install -DskipTests
+
+      - save_cache: *save-cache
+
+      - run:
+          name: build docker images
+          command: |
+            ./docker/build.sh
+
+      - run:
+          name: Dump Google Cloud Credentials to file
+          command: echo ${GOOGLE_AUTH} > ${HOME}/gcp-key.json
+
+      - run:
+          name: Configure gcloud
+          command: |
+            gcloud auth activate-service-account --key-file ${HOME}/gcp-key.json
+            gcloud --quiet config set project ${GOOGLE_PROJECT_ID}
+            gcloud --quiet config set compute/zone ${GOOGLE_COMPUTE_ZONE}
+      # build and push Docker image
+      - run: |
+          IMAGE=gcr.io/$GOOGLE_PROJECT_ID/$CIRCLE_PROJECT_REPONAME
+          TAG=$CIRCLE_SHA1
+          gcloud auth configure-docker --quiet
+          if [[ $CIRCLE_BRANCH = "pandio-dev" ]]; then
+            docker tag apachepulsar/pulsar-all:2.5.2 $IMAGE:2.5.2-dev-$TAG
+            docker push $IMAGE:2.5.2-dev-$TAG
+            docker tag $IMAGE:2.5.2-dev-$TAG $IMAGE:dev
+            docker push $IMAGE:dev
+          elif [[ $CIRCLE_BRANCH = "pandio-stable" ]]; then
+            docker tag apachepulsar/pulsar-all:2.5.2 $IMAGE:2.5.2-stable-$TAG
+            docker push $IMAGE:2.5.2-stable-$TAG
+            docker tag $IMAGE:2.5.2-stable-$TAG $IMAGE:stable
+            docker push $IMAGE:stable
+          fi
+          if [[ $CIRCLE_BRANCH = "master" ]]; then
+            docker tag apachepulsar/pulsar-all:2.5.2 $IMAGE:2.5.2-master-$TAG
+            docker push $IMAGE:2.5.2-master-$TAG
+          fi
+
+workflows:
+  version: 2
+  build_push_image:
+    jobs:
+      - push_image:
+          filters:
+            branches:
+              only:
+                - pandio-dev
+                - pandio-stable
