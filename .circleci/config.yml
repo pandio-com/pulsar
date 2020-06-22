@@ -1,0 +1,81 @@
+aliases:
+  - &restore-cache
+    keys:
+      - caching-dependencies-{{ checksum "pom.xml" }}
+      - caching-dependencies-
+
+  - &save-cache
+    paths:
+      - /root/.m2
+    key: caching-dependencies-{{ checksum "pom.xml" }}
+
+version: 2
+jobs:
+  push_image:
+    docker:
+      - image: improwised/jdk8-build:v4
+
+    working_directory: ~/repo
+    environment:
+      - GOOGLE_PROJECT_ID: pandio-281116
+
+    steps:
+      - checkout
+      - setup_remote_docker
+
+      - restore_cache: *restore-cache
+
+      - run:
+          name: build jar files & create tarball
+          command: |
+            mvn install -DskipTests
+
+      - save_cache: *save-cache
+
+      - run:
+          name: build docker images
+          command: |
+            ./ci-build/for-copy.sh
+
+      - run:
+          name: Dump Google Cloud Credentials to file
+          command: echo ${GOOGLE_AUTH} > ${HOME}/gcp-key.json
+
+      - run:
+          name: Configure gcloud
+          command: |
+            gcloud auth activate-service-account --key-file ${HOME}/gcp-key.json
+            gcloud --quiet config set project ${GOOGLE_PROJECT_ID}
+
+      # build and push Docker image
+      - run: |
+          IMAGE=gcr.io/$GOOGLE_PROJECT_ID/$CIRCLE_PROJECT_REPONAME
+          TAG=$(git rev-parse --short HEAD)
+          gcloud auth configure-docker --quiet
+          if [[ $CIRCLE_BRANCH = "pandio-dev" ]]; then
+            docker build -t $IMAGE:2.5.2-dev-$TAG ./ci-build
+            docker push $IMAGE:2.5.2-dev-$TAG
+            docker tag $IMAGE:2.5.2-dev-$TAG $IMAGE:dev
+            docker push $IMAGE:dev
+          elif [[ $CIRCLE_BRANCH = "pandio-stable" ]]; then
+            docker build -t $IMAGE:2.5.2-stable-$TAG ./ci-build
+            docker push $IMAGE:2.5.2-stable-$TAG
+            docker tag $IMAGE:2.5.2-stable-$TAG $IMAGE:stable
+            docker push $IMAGE:stable
+          fi
+          if [[ $CIRCLE_BRANCH = "master" ]]; then
+            docker tag apachepulsar/pulsar-all:2.5.2 $IMAGE:2.5.2-master-$TAG
+            docker push $IMAGE:2.5.2-master-$TAG
+          fi
+
+workflows:
+  version: 2
+  build_push_image:
+    jobs:
+      - push_image:
+          filters:
+            branches:
+              only:
+                - ci-pipeline
+                - pandio-dev
+                - pandio-stable
