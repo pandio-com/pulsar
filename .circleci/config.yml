@@ -1,0 +1,83 @@
+aliases:
+  - &restore-cache
+    keys:
+      - panpul-deps-{{ checksum "pom.xml" }}
+      - panpul-deps-
+
+  - &save-cache
+    paths:
+      - /root/.m2
+    key: panpul-deps-{{ checksum "pom.xml" }}
+
+version: 2
+jobs:
+  push_image:
+    docker:
+      - image: improwised/jdk8-build:v4
+
+    working_directory: ~/repo
+    environment:
+      - GOOGLE_PROJECT_ID: pandio-281116
+
+    steps:
+      - checkout
+      - setup_remote_docker
+
+      - restore_cache: *restore-cache
+
+      - run:
+          name: build jar files & create tarball
+          command: |
+            mvn install -DskipTests
+
+      - save_cache: *save-cache
+
+      - run:
+          name: build docker images
+          command: |
+            ./ci-build/for-copy.sh
+
+      - run:
+          name: Dump Google Cloud Credentials to file
+          command: echo ${GOOGLE_AUTH} > ${HOME}/gcp-key.json
+
+      - run:
+          name: Configure gcloud
+          command: |
+            gcloud auth activate-service-account --key-file ${HOME}/gcp-key.json
+            gcloud --quiet config set project ${GOOGLE_PROJECT_ID}
+
+      # build and push Docker image
+      - run: |
+          IMAGE=gcr.io/$GOOGLE_PROJECT_ID/$CIRCLE_PROJECT_REPONAME
+          TAG=$(git rev-parse --short HEAD)
+          export PULSAR_VERSION=$(ci-build/get-pom-version.sh)
+          echo $PULSAR_VERSION
+          gcloud auth configure-docker --quiet
+          if [[ $CIRCLE_BRANCH = "pandio-dev" ]]; then
+            docker build -t $IMAGE:$PULSAR_VERSION-dev-$TAG ./ci-build
+            docker push $IMAGE:$PULSAR_VERSION-dev-$TAG
+            docker tag $IMAGE:$PULSAR_VERSION-dev-$TAG $IMAGE:dev
+            docker push $IMAGE:dev
+          elif [[ $CIRCLE_BRANCH = "pandio-stable" ]]; then
+            docker build -t $IMAGE:$PULSAR_VERSION-stable-$TAG ./ci-build
+            docker push $IMAGE:$PULSAR_VERSION-stable-$TAG
+            docker tag $IMAGE:$PULSAR_VERSION-stable-$TAG $IMAGE:stable
+            docker push $IMAGE:stable
+          fi
+          if [[ $CIRCLE_BRANCH = "master" ]]; then
+            docker tag apachepulsar/pulsar-all:$PULSAR_VERSION $IMAGE:$PULSAR_VERSION-master-$TAG
+            docker push $IMAGE:$PULSAR_VERSION-master-$TAG
+          fi
+
+workflows:
+  version: 2
+  build_push_image:
+    jobs:
+      - push_image:
+          filters:
+            branches:
+              only:
+                - ci-pipeline
+                - pandio-dev
+                - pandio-stable
