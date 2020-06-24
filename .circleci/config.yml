@@ -29,8 +29,6 @@ jobs:
 
       - run:
           name: build jar files & create tarball
-          # command: |
-          #   mvn clean install -DskipTests
           command: |
             mvn install -DskipTests
 
