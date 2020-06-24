@@ -13,7 +13,7 @@ version: 2
 jobs:
   push_image:
     docker:
-      - image: improwised/jdk8-build:v3
+      - image: improwised/jdk8-build:v4
 
     working_directory: /pulsar
     environment:
