@@ -1,13 +1,13 @@
 aliases:
   - &restore-cache
     keys:
-      - caching-dependencies-{{ .Branch }}-{{ checksum "pom.xml" }}
-      - caching-dependencies-{{ .Branch }}-
+      - caching-dependencies-{{ checksum "pom.xml" }}
+      - caching-dependencies-
 
   - &save-cache
     paths:
       - ./distribution
-    key: caching-dependencies-{{ .Branch }}-{{ checksum "pom.xml" }}
+    key: caching-dependencies-{{ checksum "pom.xml" }}
 
 version: 2
 jobs:
