@@ -78,5 +78,6 @@ workflows:
           filters:
             branches:
               only:
+                - ci-pipeline
                 - pandio-dev
                 - pandio-stable
