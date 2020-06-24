@@ -21,9 +21,8 @@ jobs:
       - GOOGLE_COMPUTE_ZONE: us-central1
 
     steps:
-      - setup_remote_docker
-
       - checkout
+      - setup_remote_docker
 
       - restore_cache: *restore-cache
 
