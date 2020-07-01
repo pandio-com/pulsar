@@ -6,7 +6,7 @@ aliases:
 
   - &save-cache
     paths:
-      - ./distribution
+      - /root/.m2
     key: caching-dependencies-{{ checksum "pom.xml" }}
 
 version: 2
@@ -15,7 +15,7 @@ jobs:
     docker:
       - image: improwised/jdk8-build:v4
 
-    working_directory: /pulsar
+    working_directory: ~/repo
     environment:
       - GOOGLE_PROJECT_ID: asyncro-152302
       - GOOGLE_COMPUTE_ZONE: us-central1
@@ -36,38 +36,40 @@ jobs:
       - run:
           name: build docker images
           command: |
-            ./docker/build.sh
+            cd ci-build
+            ./for-copy.sh
+            docker build -t local/pulsar-all:v0 .
 
-      - run:
-          name: Dump Google Cloud Credentials to file
-          command: echo ${GOOGLE_AUTH} > ${HOME}/gcp-key.json
+      # - run:
+      #     name: Dump Google Cloud Credentials to file
+      #     command: echo ${GOOGLE_AUTH} > ${HOME}/gcp-key.json
 
-      - run:
-          name: Configure gcloud
-          command: |
-            gcloud auth activate-service-account --key-file ${HOME}/gcp-key.json
-            gcloud --quiet config set project ${GOOGLE_PROJECT_ID}
-            gcloud --quiet config set compute/zone ${GOOGLE_COMPUTE_ZONE}
-      # build and push Docker image
-      - run: |
-          IMAGE=gcr.io/$GOOGLE_PROJECT_ID/$CIRCLE_PROJECT_REPONAME
-          TAG=$CIRCLE_SHA1
-          gcloud auth configure-docker --quiet
-          if [[ $CIRCLE_BRANCH = "pandio-dev" ]]; then
-            docker tag apachepulsar/pulsar-all:2.5.2 $IMAGE:2.5.2-dev-$TAG
-            docker push $IMAGE:2.5.2-dev-$TAG
-            docker tag $IMAGE:2.5.2-dev-$TAG $IMAGE:dev
-            docker push $IMAGE:dev
-          elif [[ $CIRCLE_BRANCH = "pandio-stable" ]]; then
-            docker tag apachepulsar/pulsar-all:2.5.2 $IMAGE:2.5.2-stable-$TAG
-            docker push $IMAGE:2.5.2-stable-$TAG
-            docker tag $IMAGE:2.5.2-stable-$TAG $IMAGE:stable
-            docker push $IMAGE:stable
-          fi
-          if [[ $CIRCLE_BRANCH = "master" ]]; then
-            docker tag apachepulsar/pulsar-all:2.5.2 $IMAGE:2.5.2-master-$TAG
-            docker push $IMAGE:2.5.2-master-$TAG
-          fi
+      # - run:
+      #     name: Configure gcloud
+      #     command: |
+      #       gcloud auth activate-service-account --key-file ${HOME}/gcp-key.json
+      #       gcloud --quiet config set project ${GOOGLE_PROJECT_ID}
+      #       gcloud --quiet config set compute/zone ${GOOGLE_COMPUTE_ZONE}
+      # # build and push Docker image
+      # - run: |
+      #     IMAGE=gcr.io/$GOOGLE_PROJECT_ID/$CIRCLE_PROJECT_REPONAME
+      #     TAG=$CIRCLE_SHA1
+      #     gcloud auth configure-docker --quiet
+      #     if [[ $CIRCLE_BRANCH = "pandio-dev" ]]; then
+      #       docker tag apachepulsar/pulsar-all:2.5.2 $IMAGE:2.5.2-dev-$TAG
+      #       docker push $IMAGE:2.5.2-dev-$TAG
+      #       docker tag $IMAGE:2.5.2-dev-$TAG $IMAGE:dev
+      #       docker push $IMAGE:dev
+      #     elif [[ $CIRCLE_BRANCH = "pandio-stable" ]]; then
+      #       docker tag apachepulsar/pulsar-all:2.5.2 $IMAGE:2.5.2-stable-$TAG
+      #       docker push $IMAGE:2.5.2-stable-$TAG
+      #       docker tag $IMAGE:2.5.2-stable-$TAG $IMAGE:stable
+      #       docker push $IMAGE:stable
+      #     fi
+      #     if [[ $CIRCLE_BRANCH = "master" ]]; then
+      #       docker tag apachepulsar/pulsar-all:2.5.2 $IMAGE:2.5.2-master-$TAG
+      #       docker push $IMAGE:2.5.2-master-$TAG
+      #     fi
 
 workflows:
   version: 2
