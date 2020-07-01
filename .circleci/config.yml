@@ -52,8 +52,6 @@ jobs:
           IMAGE=gcr.io/$GOOGLE_PROJECT_ID/$CIRCLE_PROJECT_REPONAME
           TAG=$(git rev-parse --short HEAD)
           gcloud auth configure-docker --quiet
-          docker build -t $IMAGE:2.5.2-dev-$TAG ./ci-build
-          echo "image builded"
           if [[ $CIRCLE_BRANCH = "pandio-dev" ]]; then
             docker build -t $IMAGE:2.5.2-dev-$TAG ./ci-build
             docker push $IMAGE:2.5.2-dev-$TAG
