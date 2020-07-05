@@ -38,7 +38,6 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 
 import java.util.function.Supplier;
-import lombok.Getter;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -53,10 +52,12 @@ import org.apache.pulsar.client.api.Authentication;
 import org.apache.pulsar.client.api.AuthenticationDataProvider;
 import org.apache.pulsar.common.allocator.PulsarByteBufAllocator;
 import org.apache.pulsar.common.api.AuthData;
+import org.apache.pulsar.common.api.proto.PulsarApi;
 import org.apache.pulsar.common.protocol.Commands;
 import org.apache.pulsar.common.protocol.PulsarDecoder;
 import org.apache.pulsar.common.api.proto.PulsarApi.CommandAuthChallenge;
 import org.apache.pulsar.common.api.proto.PulsarApi.CommandConnected;
+import org.apache.pulsar.common.util.protobuf.ByteBufCodedInputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -129,11 +130,11 @@ public class DirectProxyHandler {
             cnx.setRemoteHostName(targetBroker.getHost());
 
             // if enable full parsing feature
-            if (ProxyService.proxyLogLevel == 2) {
+            //if (ProxyService.proxyLogLevel == 2) {
                 //Set a map between inbound and outbound,
                 //so can find inbound by outbound or find outbound by inbound
                 inboundOutboundChannelMap.put(outboundChannel.id() , inboundChannel.id());
-            }
+            //}
 
 
         });
@@ -171,6 +172,9 @@ public class DirectProxyHandler {
 
         @Override
         public void channelRead(final ChannelHandlerContext ctx, Object msg) throws Exception {
+//            log.error("**********[{}] [{}] Received msg on broker connection: {}", inboundChannel, outboundChannel,
+//                    msg.getClass());
+            System.out.println("*****************" + state.name());
             switch (state) {
             case Init:
                 if (log.isDebugEnabled()) {
@@ -179,6 +183,7 @@ public class DirectProxyHandler {
                 }
 
                 // Do the regular decoding for the Connected message
+                printCmd(msg);
                 super.channelRead(ctx, msg);
                 break;
 
@@ -187,6 +192,8 @@ public class DirectProxyHandler {
                 if (msg instanceof ByteBuf) {
                     ProxyService.bytesCounter.inc(((ByteBuf) msg).readableBytes());
                 }
+
+                System.out.println("Starting" + outboundChannel.pipeline().names().stream().reduce( "", (s, s2) -> s + "," + s2 ));
                 inboundChannel.writeAndFlush(msg).addListener(this);
                 break;
 
@@ -194,6 +201,48 @@ public class DirectProxyHandler {
                 break;
             }
 
+        }
+
+        public void printCmd(Object msg) {
+            // Get a buffer that contains the full frame
+            ByteBuf buffer = ((ByteBuf) msg).copy();
+
+            buffer.forEachByte( b -> {
+                System.out.println(b);
+                return true;
+            } );
+            PulsarApi.BaseCommand cmd = null;
+            PulsarApi.BaseCommand.Builder cmdBuilder = null;
+
+            try {
+                // De-serialize the command
+                int cmdSize = (int) buffer.readUnsignedInt();
+                int writerIndex = buffer.writerIndex();
+                buffer.writerIndex(buffer.readerIndex() + cmdSize);
+                ByteBufCodedInputStream cmdInputStream = ByteBufCodedInputStream.get(buffer);
+                cmdBuilder = PulsarApi.BaseCommand.newBuilder();
+                cmd = cmdBuilder.mergeFrom(cmdInputStream, null).build();
+                buffer.writerIndex(writerIndex);
+
+                cmdInputStream.recycle();
+
+
+                log.error("***************[{}] Received cmd {}", ctx.channel().remoteAddress(), cmd.getType());
+
+
+            } catch (Throwable e) {
+                e.printStackTrace();
+            } finally {
+                if (cmdBuilder != null) {
+                    cmdBuilder.recycle();
+                }
+
+                if (cmd != null) {
+                    cmd.recycle();
+                }
+
+                buffer.release();
+            }
         }
 
         @Override
@@ -274,8 +323,8 @@ public class DirectProxyHandler {
                 }
                 if (ProxyService.proxyLogLevel == 0) {
                     // direct tcp proxy
-                    inboundChannel.pipeline().remove("frameDecoder");
-                    outboundChannel.pipeline().remove("frameDecoder");
+//                    inboundChannel.pipeline().remove("frameDecoder");
+//                    outboundChannel.pipeline().remove("frameDecoder");
                 } else {
                     // Enable parsing feature, proxyLogLevel(1 or 2)
                     // Add parser handler
@@ -308,6 +357,13 @@ public class DirectProxyHandler {
                                                                                     Commands.DEFAULT_MAX_MESSAGE_SIZE));
                     }
                 }
+
+                inboundChannel.pipeline().addBefore("handler", "mydecoderIn", new PandioDecoder(ParserProxyHandler.FRONTEND_CONN,
+                        Commands.DEFAULT_MAX_MESSAGE_SIZE));
+
+                outboundChannel.pipeline().addBefore("proxyOutboundHandler", "mydecoderOut", new PandioDecoder(ParserProxyHandler.BACKEND_CONN,
+                        Commands.DEFAULT_MAX_MESSAGE_SIZE));
+
                 // Start reading from both connections
                 inboundChannel.read();
                 outboundChannel.read();
