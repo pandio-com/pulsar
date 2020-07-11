@@ -23,21 +23,11 @@ import java.util.Map;
 public class PandioBandwidthPublisher extends ChannelInboundHandlerAdapter {
 
     public static final String HANDLER_NAME = "pandioBandwidthPublisher";
-
-    private String connType;
-
-    private int maxMessageSize;
-
-
     //producerid+channelid as key
     //or consumerid+channelid as key
     private static Map<String, String> producerHashMap = new ConcurrentHashMap<>();
     private static Map<String, String> consumerHashMap = new ConcurrentHashMap<>();
 
-    public PandioBandwidthPublisher(String type, int maxMessageSize) {
-        this.connType = type;
-        this.maxMessageSize = maxMessageSize;
-    }
 
     private void printTopicAndMessage(String topic, List<RawMessage> messages) {
         System.out.println("For the topic ------------------------>" + topic);
@@ -71,36 +61,19 @@ public class PandioBandwidthPublisher extends ChannelInboundHandlerAdapter {
             switch (cmd.getType()) {
                 case PRODUCER:
                     PandioBandwidthPublisher.producerHashMap.put(String.valueOf(cmd.getProducer().getProducerId()) + "," + String.valueOf(ctx.channel().id()), cmd.getProducer().getTopic());
-
                     break;
-
                 case SEND:
                     topicName = TopicName.get(PandioBandwidthPublisher.producerHashMap.get(String.valueOf(cmd.getSend().getProducerId()) + "," + String.valueOf(ctx.channel().id())));
-                    MessageParser.parseMessage(topicName, -1L,
-                            -1L, buffer, (message) -> {
-                                messages.add(message);
-                            }, maxMessageSize);
-
                     printTopicAndMessage(topicName.getPersistenceNamingEncoding(), messages);
                     break;
 
                 case SUBSCRIBE:
                     PandioBandwidthPublisher.consumerHashMap.put(String.valueOf(cmd.getSubscribe().getConsumerId()) + "," + String.valueOf(ctx.channel().id()), cmd.getSubscribe().getTopic());
-
                     break;
-
                 case MESSAGE:
                     topicName = TopicName.get(PandioBandwidthPublisher.consumerHashMap.get(String.valueOf(cmd.getMessage().getConsumerId()) + "," + DirectProxyHandler.inboundOutboundChannelMap.get(ctx.channel().id())));
-                    MessageParser.parseMessage(topicName, -1L,
-                            -1L, buffer, (message) -> {
-                                messages.add(message);
-                            }, maxMessageSize);
                     printTopicAndMessage(topicName.getPersistenceNamingEncoding(), messages);
-
-
-                    //logging(ctx.channel(), cmd.getType(), "", messages);
                     break;
-
                 default:
                     break;
             }

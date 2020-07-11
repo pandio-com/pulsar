@@ -318,11 +318,8 @@ public class DirectProxyHandler {
                 }
 
                 if(ProxyService.isPandioBandwidthPublisherEnabled) {
-                    inboundChannel.pipeline().addBefore("handler", PandioBandwidthPublisher.HANDLER_NAME, new PandioBandwidthPublisher(ParserProxyHandler.FRONTEND_CONN,
-                            Commands.DEFAULT_MAX_MESSAGE_SIZE));
-
-                    outboundChannel.pipeline().addBefore("proxyOutboundHandler", PandioBandwidthPublisher.HANDLER_NAME, new PandioBandwidthPublisher(ParserProxyHandler.BACKEND_CONN,
-                            Commands.DEFAULT_MAX_MESSAGE_SIZE));
+                    inboundChannel.pipeline().addBefore("handler", PandioBandwidthPublisher.HANDLER_NAME, new PandioBandwidthPublisher());
+                    outboundChannel.pipeline().addBefore("proxyOutboundHandler", PandioBandwidthPublisher.HANDLER_NAME, new PandioBandwidthPublisher());
                 }
                 // Start reading from both connections
                 inboundChannel.read();
