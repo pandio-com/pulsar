@@ -67,6 +67,8 @@ public class ProxyConfiguration implements PulsarConfiguration {
     private static final String CATEGORY_HTTP = "HTTP";
     @Category
     private static final String CATEGORY_SASL_AUTH = "SASL Authentication Provider";
+    @Category
+    private static final String CATEGORY_PANDIO = "Pandio Components";
 
     @FieldContext(
         category = CATEGORY_BROKER_DISCOVERY,
@@ -464,6 +466,12 @@ public class ProxyConfiguration implements PulsarConfiguration {
            doc = "Number of threads to use for HTTP requests processing"
     )
     private int httpNumThreads = Math.max(8, 2 * Runtime.getRuntime().availableProcessors());
+
+    @FieldContext(
+            category = CATEGORY_PANDIO,
+            doc = "Whether pandio bandwidth publisher is enabled for the Pulsar proxy"
+    )
+    private boolean pandioBandwidthPublisherEnabled = false;
 
     @PropertiesContext(
         properties = {

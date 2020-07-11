@@ -94,6 +94,8 @@ public class ProxyService implements Closeable {
 
     private final ScheduledExecutorService statsExecutor;
 
+    protected static boolean isPandioBandwidthPublisherEnabled;
+
     private static final int numThreads = Runtime.getRuntime().availableProcessors();
 
     static final Gauge activeConnections = Gauge
@@ -134,6 +136,8 @@ public class ProxyService implements Closeable {
         } else {
             proxyLogLevel = 0;
         }
+        ProxyService.isPandioBandwidthPublisherEnabled = proxyConfig.isPandioBandwidthPublisherEnabled();
+
         this.acceptorGroup = EventLoopUtil.newEventLoopGroup(1, acceptorThreadFactory);
         this.workerGroup = EventLoopUtil.newEventLoopGroup(numThreads, workersThreadFactory);
         this.authenticationService = authenticationService;
