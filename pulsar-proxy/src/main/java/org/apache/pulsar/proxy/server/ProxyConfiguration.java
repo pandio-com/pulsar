@@ -473,6 +473,12 @@ public class ProxyConfiguration implements PulsarConfiguration {
     )
     private boolean pandioBandwidthPublisherEnabled = false;
 
+    @FieldContext(
+            category = CATEGORY_PANDIO,
+            doc = "Size of thread-pool used to execute async tasks in Pandio Bandwidth Publisher"
+    )
+    private int pandioBandwidthPublisherNumOfThreads = Runtime.getRuntime().availableProcessors();
+
     @PropertiesContext(
         properties = {
             @PropertyContext(

@@ -11,6 +11,7 @@ import org.apache.pulsar.common.api.proto.PulsarApi;
 import org.apache.pulsar.common.api.raw.MessageParser;
 import org.apache.pulsar.common.api.raw.RawMessage;
 import org.apache.pulsar.common.naming.TopicName;
+import org.apache.pulsar.common.protocol.Commands;
 import org.apache.pulsar.common.util.protobuf.ByteBufCodedInputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,6 +19,8 @@ import org.slf4j.LoggerFactory;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 
 public class PandioBandwidthPublisher extends ChannelInboundHandlerAdapter {
@@ -27,7 +30,13 @@ public class PandioBandwidthPublisher extends ChannelInboundHandlerAdapter {
     //or consumerid+channelid as key
     private static Map<String, String> producerHashMap = new ConcurrentHashMap<>();
     private static Map<String, String> consumerHashMap = new ConcurrentHashMap<>();
+    private static ExecutorService executorService = null;
 
+    public PandioBandwidthPublisher() {
+        if (PandioBandwidthPublisher.executorService == null) {
+            PandioBandwidthPublisher.executorService = Executors.newFixedThreadPool(ProxyService.pandioBandwidthPublisherNumOfThreads);
+        }
+    }
 
     private void printTopicAndMessage(String topic, List<RawMessage> messages) {
         System.out.println("For the topic ------------------------>" + topic);
@@ -35,6 +44,7 @@ public class PandioBandwidthPublisher extends ChannelInboundHandlerAdapter {
         for (int i = 0; i < messages.size(); i++) {
             System.out.printf("Message Index : %d, Message Data : %s", i, new String(ByteBufUtil.getBytes((messages.get(i)).getData())));
         }
+        System.out.println();
     }
 
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
@@ -42,7 +52,7 @@ public class PandioBandwidthPublisher extends ChannelInboundHandlerAdapter {
         PulsarApi.BaseCommand.Builder cmdBuilder = null;
         TopicName topicName;
         List<RawMessage> messages = Lists.newArrayList();
-        ByteBuf buffer = (ByteBuf) (msg);
+        ByteBuf buffer = ((ByteBuf) (msg)).copy();
 
         try {
             buffer.markReaderIndex();
@@ -64,6 +74,10 @@ public class PandioBandwidthPublisher extends ChannelInboundHandlerAdapter {
                     break;
                 case SEND:
                     topicName = TopicName.get(PandioBandwidthPublisher.producerHashMap.get(String.valueOf(cmd.getSend().getProducerId()) + "," + String.valueOf(ctx.channel().id())));
+                    MessageParser.parseMessage(topicName,  -1L,
+                            -1L,buffer,(message) -> {
+                                messages.add(message);
+                            }, Commands.DEFAULT_MAX_MESSAGE_SIZE);
                     printTopicAndMessage(topicName.getPersistenceNamingEncoding(), messages);
                     break;
 
@@ -72,6 +86,10 @@ public class PandioBandwidthPublisher extends ChannelInboundHandlerAdapter {
                     break;
                 case MESSAGE:
                     topicName = TopicName.get(PandioBandwidthPublisher.consumerHashMap.get(String.valueOf(cmd.getMessage().getConsumerId()) + "," + DirectProxyHandler.inboundOutboundChannelMap.get(ctx.channel().id())));
+                    MessageParser.parseMessage(topicName,  -1L,
+                            -1L,buffer,(message) -> {
+                                messages.add(message);
+                            }, Commands.DEFAULT_MAX_MESSAGE_SIZE);
                     printTopicAndMessage(topicName.getPersistenceNamingEncoding(), messages);
                     break;
                 default:
@@ -100,7 +118,11 @@ public class PandioBandwidthPublisher extends ChannelInboundHandlerAdapter {
             compBuf.writerIndex(totalSizeBuf.capacity() + buffer.capacity());
 
             //next handler
-            ctx.fireChannelRead(compBuf);
+            /*
+             * if proxy level is greater than zero then leave it pass the msg as it is for the {@link ParserProxyHandler}
+             * unless pass the decoded buffer
+             */
+            ctx.fireChannelRead(ProxyService.proxyLogLevel == 0 ? compBuf : msg);
         }
     }
 
