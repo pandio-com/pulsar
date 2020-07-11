@@ -136,7 +136,7 @@ public class DirectProxyHandler {
             cnx.setRemoteHostName(targetBroker.getHost());
 
             // if enable full parsing feature
-            if (service.getProxyLogLevel() == 2) {
+            if (service.getProxyLogLevel() == 2 || ProxyService.isPandioBandwidthPublisherEnabled) {
                 //Set a map between inbound and outbound,
                 //so can find inbound by outbound or find outbound by inbound
                 inboundOutboundChannelMap.put(outboundChannel.id() , inboundChannel.id());
@@ -279,11 +279,12 @@ public class DirectProxyHandler {
                 if (log.isDebugEnabled()) {
                     log.debug("[{}] [{}] Removing decoder from pipeline", inboundChannel, outboundChannel);
                 }
-                if (service.getProxyLogLevel() == 0) {
+                if (service.getProxyLogLevel() == 0 && !ProxyService.isPandioBandwidthPublisherEnabled) {
                     // direct tcp proxy
                     inboundChannel.pipeline().remove("frameDecoder");
                     outboundChannel.pipeline().remove("frameDecoder");
-                } else {
+                }
+                if (ProxyService.proxyLogLevel == 1 || ProxyService.proxyLogLevel == 2){
                     // Enable parsing feature, proxyLogLevel(1 or 2)
                     // Add parser handler
                     if (connected.hasMaxMessageSize()) {
@@ -314,6 +315,14 @@ public class DirectProxyHandler {
                                                                                     ParserProxyHandler.BACKEND_CONN,
                                                                                     Commands.DEFAULT_MAX_MESSAGE_SIZE));
                     }
+                }
+
+                if(ProxyService.isPandioBandwidthPublisherEnabled) {
+                    inboundChannel.pipeline().addBefore("handler", PandioBandwidthPublisher.HANDLER_NAME, new PandioBandwidthPublisher(ParserProxyHandler.FRONTEND_CONN,
+                            Commands.DEFAULT_MAX_MESSAGE_SIZE));
+
+                    outboundChannel.pipeline().addBefore("proxyOutboundHandler", PandioBandwidthPublisher.HANDLER_NAME, new PandioBandwidthPublisher(ParserProxyHandler.BACKEND_CONN,
+                            Commands.DEFAULT_MAX_MESSAGE_SIZE));
                 }
                 // Start reading from both connections
                 inboundChannel.read();
