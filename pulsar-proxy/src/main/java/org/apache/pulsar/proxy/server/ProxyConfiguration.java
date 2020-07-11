@@ -475,9 +475,17 @@ public class ProxyConfiguration implements PulsarConfiguration {
 
     @FieldContext(
             category = CATEGORY_PANDIO,
-            doc = "Size of thread-pool used to execute async tasks in Pandio Bandwidth Publisher"
+            doc = "Size of thread-pool used to execute async tasks in Pandio Bandwidth Publisher. Zookeeper Publish task will run on its dedicated thread which is seperate from this threadpool."
     )
     private int pandioBandwidthPublisherNumOfThreads = Runtime.getRuntime().availableProcessors();
+
+    @FieldContext(
+            category = CATEGORY_PANDIO,
+            doc = "For Pandio Bandwidth publisher Interval for the zookeeper publish task in ms"
+    )
+    private int pandioBandwidthPublisherZookeeperPublishIntervalms = Runtime.getRuntime().availableProcessors();
+
+
 
     @PropertiesContext(
         properties = {

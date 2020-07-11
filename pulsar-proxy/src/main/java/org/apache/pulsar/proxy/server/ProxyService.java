@@ -96,6 +96,7 @@ public class ProxyService implements Closeable {
 
     protected static boolean isPandioBandwidthPublisherEnabled;
     protected static int pandioBandwidthPublisherNumOfThreads;
+    protected static int pandioBandwidthPublisherZookeeperPublishIntervalms;
 
     private static final int numThreads = Runtime.getRuntime().availableProcessors();
 
@@ -140,8 +141,8 @@ public class ProxyService implements Closeable {
 
         ProxyService.isPandioBandwidthPublisherEnabled = proxyConfig.isPandioBandwidthPublisherEnabled();
         ProxyService.pandioBandwidthPublisherNumOfThreads = proxyConfig.getPandioBandwidthPublisherNumOfThreads();
-
         ProxyService.pandioBandwidthPublisherNumOfThreads = proxyConfig.getPandioBandwidthPublisherNumOfThreads();
+        ProxyService.pandioBandwidthPublisherZookeeperPublishIntervalms = proxyConfig.getPandioBandwidthPublisherZookeeperPublishIntervalms();
 
         this.acceptorGroup = EventLoopUtil.newEventLoopGroup(1, acceptorThreadFactory);
         this.workerGroup = EventLoopUtil.newEventLoopGroup(numThreads, workersThreadFactory);

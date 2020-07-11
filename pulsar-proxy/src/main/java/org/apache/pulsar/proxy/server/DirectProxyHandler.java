@@ -319,8 +319,8 @@ public class DirectProxyHandler {
 
                 if(ProxyService.isPandioBandwidthPublisherEnabled) {
                     boolean isParserEnabled = ProxyService.proxyLogLevel == 1 || ProxyService.proxyLogLevel == 2;
-                    inboundChannel.pipeline().addBefore(isParserEnabled ? "inboundParser" : "handler", PandioBandwidthPublisher.HANDLER_NAME, new PandioBandwidthPublisher());
-                    outboundChannel.pipeline().addBefore(isParserEnabled ? "outboundParser" : "proxyOutboundHandler", PandioBandwidthPublisher.HANDLER_NAME, new PandioBandwidthPublisher());
+                    inboundChannel.pipeline().addBefore(isParserEnabled ? "inboundParser" : "handler", PandioBandwidthPublisher.HANDLER_NAME, new PandioBandwidthPublisher(true));
+                    outboundChannel.pipeline().addBefore(isParserEnabled ? "outboundParser" : "proxyOutboundHandler", PandioBandwidthPublisher.HANDLER_NAME, new PandioBandwidthPublisher(false));
                 }
                 // Start reading from both connections
                 inboundChannel.read();
