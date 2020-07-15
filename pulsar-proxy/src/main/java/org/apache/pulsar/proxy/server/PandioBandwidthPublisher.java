@@ -4,7 +4,12 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelId;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import lombok.Builder;
+import lombok.Data;
+import lombok.With;
+import lombok.val;
 import org.apache.pulsar.common.api.proto.PulsarApi;
 import org.apache.pulsar.common.naming.TopicName;
 import org.apache.pulsar.common.util.ObjectMapperFactory;
@@ -13,43 +18,51 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.*;
 import java.util.Map;
-
 
 public class PandioBandwidthPublisher extends ChannelInboundHandlerAdapter {
 
     public static final String HANDLER_NAME = "pandioBandwidthPublisher";
     //producerid+channelid as key
     //or consumerid+channelid as key
+
     private static Map<String, String> producerHashMap = new ConcurrentHashMap<>();
     private static Map<String, String> consumerHashMap = new ConcurrentHashMap<>();
+
+    private static Map<String, List<ChannelInfo>> channelMap = new ConcurrentHashMap<>();
+
+    public static Map<ChannelId, ChannelId> inboundOutboundChannelMap = new ConcurrentHashMap<>();
 
     private static ConcurrentHashMap<String, Long> tenantBandwidthMap = null;
     private static ExecutorService executorService = null;
     private static ScheduledExecutorService scheduledExecutorService = null;
+    private final ProxyConfiguration config;
 
-    private boolean isInbound;
-
-    public PandioBandwidthPublisher(boolean isInbound) {
-        this.isInbound = isInbound;
+    public PandioBandwidthPublisher(final ProxyConfiguration config) {
+        this.config = config;
         if (tenantBandwidthMap == null) {
             tenantBandwidthMap = new ConcurrentHashMap<>();
         }
         if (PandioBandwidthPublisher.executorService == null) {
-            PandioBandwidthPublisher.executorService = Executors.newFixedThreadPool(ProxyService.pandioBandwidthPublisherNumOfThreads);
+            PandioBandwidthPublisher.executorService = Executors.newFixedThreadPool(config.getPandioBandwidthPublisherNumOfThreads());
         }
         if (PandioBandwidthPublisher.scheduledExecutorService == null) {
-            scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
+            scheduledExecutorService = Executors.newScheduledThreadPool(1);
             scheduledExecutorService.scheduleWithFixedDelay(zookeeperPublishTask(),
                     0,
-                    5000,
+                    config.getPandioBandwidthPublisherZookeeperPublishIntervalMs(),
                     TimeUnit.MILLISECONDS);
         }
     }
 
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
         ByteBuf buffer = (ByteBuf) (msg);
+        System.out.println("Start");
+        ctx.pipeline().forEach( stringChannelHandlerEntry -> System.out.print(stringChannelHandlerEntry.getKey() + ", ") );
+        System.out.println("End");
         writeMessageSize(buffer.copy(), String.valueOf(ctx.channel().id()));
         if (ProxyService.proxyLogLevel == 0) {
             // add totalSize to buffer Head
@@ -70,6 +83,7 @@ public class PandioBandwidthPublisher extends ChannelInboundHandlerAdapter {
         PulsarApi.BaseCommand cmd = null;
         PulsarApi.BaseCommand.Builder cmdBuilder = null;
         TopicName topicName = null;
+
         try {
             buffer.markReaderIndex();
             buffer.markWriterIndex();
@@ -82,21 +96,33 @@ public class PandioBandwidthPublisher extends ChannelInboundHandlerAdapter {
             cmd = cmdBuilder.mergeFrom(cmdInputStream, null).build();
             buffer.writerIndex(writerIndex);
             cmdInputStream.recycle();
+            System.out.printf("CMD:%s, ID: %s\n", cmd.getType(), channelId);
+
             switch (cmd.getType()) {
-                case PRODUCER:
+                case PRODUCER: {
                     topicName = TopicName.get(cmd.getProducer().getTopic());
-                    PandioBandwidthPublisher.producerHashMap.put(String.valueOf(cmd.getProducer().getProducerId()) + "," + channelId, cmd.getProducer().getTopic());
-                    break;
-                case SEND:
-                    topicName = TopicName.get(PandioBandwidthPublisher.producerHashMap.get(String.valueOf(cmd.getSend().getProducerId()) + "," + channelId));
-                    break;
-                case SUBSCRIBE:
+                    val producerMapKey = String.valueOf(cmd.getProducer().getProducerId()) + "," + channelId;
+                    PandioBandwidthPublisher.producerHashMap.put(producerMapKey, cmd.getProducer().getTopic());
+                    updateChannelInfoWithProducerMapKey(channelId, producerMapKey);
+                }
+                break;
+                case SEND: {
+                    val producerMapKey = String.valueOf(cmd.getSend().getProducerId()) + "," + channelId;
+                    topicName = TopicName.get(PandioBandwidthPublisher.producerHashMap.get(producerMapKey));
+                }
+                break;
+                case SUBSCRIBE: {
                     topicName = TopicName.get(cmd.getSubscribe().getTopic());
-                    PandioBandwidthPublisher.consumerHashMap.put(String.valueOf(cmd.getSubscribe().getConsumerId()) + "," + channelId, cmd.getSubscribe().getTopic());
-                    break;
-                case MESSAGE:
-                    topicName = TopicName.get(PandioBandwidthPublisher.consumerHashMap.get(String.valueOf(cmd.getMessage().getConsumerId()) + "," + DirectProxyHandler.inboundOutboundChannelMap.get(channelId)));
-                    break;
+                    val consumerMapKey = String.valueOf(cmd.getSubscribe().getConsumerId()) + "," + channelId;
+                    PandioBandwidthPublisher.consumerHashMap.put(consumerMapKey, cmd.getSubscribe().getTopic());
+                    updateChannelInfoWithConsumerMapKey(channelId, consumerMapKey);
+                }
+                break;
+                case MESSAGE: {
+                    val consumerMapKey = String.valueOf(cmd.getMessage().getConsumerId()) + "," + PandioBandwidthPublisher.inboundOutboundChannelMap.get(channelId);
+                    topicName = TopicName.get(PandioBandwidthPublisher.consumerHashMap.get(consumerMapKey));
+                }
+                break;
                 default:
                     break;
             }
@@ -117,26 +143,36 @@ public class PandioBandwidthPublisher extends ChannelInboundHandlerAdapter {
 
 
     private void updateTenantBandwidthMapAsync(TopicName topicName, ByteBuf buf) {
-        if ( topicName == null ) {
+        if (topicName == null) {
             return;
         }
         executorService.execute(
                 () -> {
-                    long size = buf.capacity();
+                    final long size = buf.capacity();
                     tenantBandwidthMap.computeIfPresent(topicName.getTenant(), (t, acc) -> acc + size);
                     tenantBandwidthMap.computeIfAbsent(topicName.getTenant(), s -> size);
                 }
         );
     }
 
-    private static final Logger log = LoggerFactory.getLogger(PandioBandwidthPublisher.class);
-
     private static Runnable zookeeperPublishTask() {
         return () -> {
-            System.out.println("Publishing The Map");
+            System.out.println("Publishing The Map for node");
             try {
                 String map = ObjectMapperFactory.getThreadLocal().writeValueAsString(tenantBandwidthMap);
                 System.out.println(map);
+
+                String pm = ObjectMapperFactory.getThreadLocal().writeValueAsString(producerHashMap);
+                System.out.println(pm);
+
+                String cm = ObjectMapperFactory.getThreadLocal().writeValueAsString(consumerHashMap);
+                System.out.println(cm);
+
+                String cidm = ObjectMapperFactory.getThreadLocal().writeValueAsString(channelMap);
+                System.out.println(cidm);
+
+                String io = ObjectMapperFactory.getThreadLocal().writeValueAsString(inboundOutboundChannelMap);
+                System.out.println(io);
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -144,4 +180,52 @@ public class PandioBandwidthPublisher extends ChannelInboundHandlerAdapter {
             //tenantBandwidthMap.clear();
         };
     }
+
+    @Data
+    @Builder
+    @With
+    private static class ChannelInfo {
+        private String key;
+        private Map<String, String> relatedMap;
+    }
+
+    private void updateChannelInfo(final String channelId, final String relatedKey, final Map<String, String> relatedMap) {
+        channelMap.computeIfAbsent(channelId, s -> new ArrayList<>());
+        val newElem = ChannelInfo.builder()
+                .key(relatedKey)
+                .relatedMap(relatedMap)
+                .build();
+        channelMap.computeIfPresent(channelId, (s, channelInfos) -> {
+            channelInfos.add(newElem);
+            return channelInfos;
+        });
+    }
+
+    private void updateChannelInfoWithProducerMapKey(final String channelId, final String producerMapKey) {
+        updateChannelInfo(channelId, producerMapKey, producerHashMap);
+    }
+
+    private void updateChannelInfoWithConsumerMapKey(final String channelId, final String consumerMapKey) {
+        updateChannelInfo(channelId, consumerMapKey, consumerHashMap);
+    }
+
+    private void removeChannelEntries(final String channelId) {
+        if (channelMap.containsKey(channelId)) {
+            channelMap.get(channelId).forEach(channelInfo -> {
+                channelInfo.getRelatedMap().remove(channelInfo.getKey());
+            });
+            channelMap.remove(channelId);
+        }
+    }
+
+    @Override
+    public void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
+        val channelId = String.valueOf(ctx.channel().id());
+        executorService.execute(() -> {
+            removeChannelEntries(channelId);
+        });
+        super.channelUnregistered(ctx);
+    }
+
+    private static final Logger log = LoggerFactory.getLogger(PandioBandwidthPublisher.class);
 }
