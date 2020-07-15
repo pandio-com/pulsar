@@ -315,10 +315,8 @@ public class DirectProxyHandler {
                                                                                     Commands.DEFAULT_MAX_MESSAGE_SIZE));
                     }
                 }
-                System.out.println("Hereeeeeeeeeeeeee");
                 if(ProxyService.isPandioBandwidthPublisherEnabled) {
-                    System.out.printf("%s----------------------%s", outboundChannel.id(), inboundChannel.id());
-                    PandioBandwidthPublisher.inboundOutboundChannelMap.put(outboundChannel.id() , inboundChannel.id());
+                    PandioBandwidthPublisher.inboundOutboundChannelMap.put(String.valueOf(outboundChannel.id()) , String.valueOf(inboundChannel.id()));
                     boolean isParserEnabled = ProxyService.proxyLogLevel == 1 || ProxyService.proxyLogLevel == 2;
                     inboundChannel.pipeline().addBefore(isParserEnabled ? "inboundParser" : "handler", PandioBandwidthPublisher.HANDLER_NAME, new PandioBandwidthPublisher(config));
                     outboundChannel.pipeline().addBefore(isParserEnabled ? "outboundParser" : "proxyOutboundHandler", PandioBandwidthPublisher.HANDLER_NAME, new PandioBandwidthPublisher(config));

@@ -29,12 +29,12 @@ public class PandioBandwidthPublisher extends ChannelInboundHandlerAdapter {
     //producerid+channelid as key
     //or consumerid+channelid as key
 
-    private static Map<String, String> producerHashMap = new ConcurrentHashMap<>();
-    private static Map<String, String> consumerHashMap = new ConcurrentHashMap<>();
+    private static final Map<String, String> producerHashMap = new ConcurrentHashMap<>();
+    private static final Map<String, String> consumerHashMap = new ConcurrentHashMap<>();
 
-    private static Map<String, List<ChannelInfo>> channelMap = new ConcurrentHashMap<>();
+    private static final Map<String, List<ChannelInfo>> channelMap = new ConcurrentHashMap<>();
 
-    public static Map<ChannelId, ChannelId> inboundOutboundChannelMap = new ConcurrentHashMap<>();
+    public static Map<String, String> inboundOutboundChannelMap = new ConcurrentHashMap<>();
 
     private static ConcurrentHashMap<String, Long> tenantBandwidthMap = null;
     private static ExecutorService executorService = null;
@@ -60,9 +60,6 @@ public class PandioBandwidthPublisher extends ChannelInboundHandlerAdapter {
 
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
         ByteBuf buffer = (ByteBuf) (msg);
-        System.out.println("Start");
-        ctx.pipeline().forEach( stringChannelHandlerEntry -> System.out.print(stringChannelHandlerEntry.getKey() + ", ") );
-        System.out.println("End");
         writeMessageSize(buffer.copy(), String.valueOf(ctx.channel().id()));
         if (ProxyService.proxyLogLevel == 0) {
             // add totalSize to buffer Head
@@ -210,12 +207,12 @@ public class PandioBandwidthPublisher extends ChannelInboundHandlerAdapter {
     }
 
     private void removeChannelEntries(final String channelId) {
-        if (channelMap.containsKey(channelId)) {
-            channelMap.get(channelId).forEach(channelInfo -> {
-                channelInfo.getRelatedMap().remove(channelInfo.getKey());
-            });
-            channelMap.remove(channelId);
-        }
+        channelMap.computeIfPresent(channelId, (s, channelInfos) -> {
+            channelInfos.forEach( channelInfo -> channelInfo.getRelatedMap().remove(channelInfo.getKey()));
+            return channelInfos;
+        });
+        channelMap.remove(channelId);
+        inboundOutboundChannelMap.remove(channelId);
     }
 
     @Override
