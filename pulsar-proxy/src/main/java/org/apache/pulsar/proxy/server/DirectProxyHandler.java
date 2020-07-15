@@ -37,7 +37,6 @@ import io.netty.handler.ssl.SslHandler;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import java.util.function.Supplier;
-import lombok.Getter;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -136,7 +135,7 @@ public class DirectProxyHandler {
             cnx.setRemoteHostName(targetBroker.getHost());
 
             // if enable full parsing feature
-            if (service.getProxyLogLevel() == 2 || ProxyService.isPandioBandwidthPublisherEnabled) {
+            if (service.getProxyLogLevel() == 2) {
                 //Set a map between inbound and outbound,
                 //so can find inbound by outbound or find outbound by inbound
                 inboundOutboundChannelMap.put(outboundChannel.id() , inboundChannel.id());
@@ -316,11 +315,13 @@ public class DirectProxyHandler {
                                                                                     Commands.DEFAULT_MAX_MESSAGE_SIZE));
                     }
                 }
-
+                System.out.println("Hereeeeeeeeeeeeee");
                 if(ProxyService.isPandioBandwidthPublisherEnabled) {
+                    System.out.printf("%s----------------------%s", outboundChannel.id(), inboundChannel.id());
+                    PandioBandwidthPublisher.inboundOutboundChannelMap.put(outboundChannel.id() , inboundChannel.id());
                     boolean isParserEnabled = ProxyService.proxyLogLevel == 1 || ProxyService.proxyLogLevel == 2;
-                    inboundChannel.pipeline().addBefore(isParserEnabled ? "inboundParser" : "handler", PandioBandwidthPublisher.HANDLER_NAME, new PandioBandwidthPublisher(true));
-                    outboundChannel.pipeline().addBefore(isParserEnabled ? "outboundParser" : "proxyOutboundHandler", PandioBandwidthPublisher.HANDLER_NAME, new PandioBandwidthPublisher(false));
+                    inboundChannel.pipeline().addBefore(isParserEnabled ? "inboundParser" : "handler", PandioBandwidthPublisher.HANDLER_NAME, new PandioBandwidthPublisher(config));
+                    outboundChannel.pipeline().addBefore(isParserEnabled ? "outboundParser" : "proxyOutboundHandler", PandioBandwidthPublisher.HANDLER_NAME, new PandioBandwidthPublisher(config));
                 }
                 // Start reading from both connections
                 inboundChannel.read();
