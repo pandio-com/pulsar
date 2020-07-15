@@ -483,7 +483,7 @@ public class ProxyConfiguration implements PulsarConfiguration {
             category = CATEGORY_PANDIO,
             doc = "For Pandio Bandwidth publisher Interval for the zookeeper publish task in ms"
     )
-    private int pandioBandwidthPublisherZookeeperPublishIntervalms = Runtime.getRuntime().availableProcessors();
+    private int pandioBandwidthPublisherZookeeperPublishIntervalMs = 10000;
 
 
 
