@@ -120,6 +120,16 @@ public class PandioBandwidthPublisher extends ChannelInboundHandlerAdapter {
                     topicName = TopicName.get(PandioBandwidthPublisher.consumerHashMap.get(consumerMapKey));
                 }
                 break;
+                case CLOSE_PRODUCER: {
+                    val producerMapKey = String.valueOf(cmd.getCloseProducer().getProducerId()) + "," + channelId;
+                    PandioBandwidthPublisher.producerHashMap.remove(producerMapKey);
+                }
+                break;
+                case CLOSE_CONSUMER: {
+                    val consumerMapKey = String.valueOf(cmd.getMessage().getConsumerId()) + "," + PandioBandwidthPublisher.inboundOutboundChannelMap.get(channelId);
+                    PandioBandwidthPublisher.consumerHashMap.remove(consumerMapKey);
+                }
+                break;
                 default:
                     break;
             }
