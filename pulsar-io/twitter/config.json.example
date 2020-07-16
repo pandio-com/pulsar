@@ -1,0 +1,6 @@
+{
+    "configs": {
+        "consumerKey": "<Twitter API Key>",
+        "consumerSecret": "<Twitter API Secret Key>"
+    }
+}

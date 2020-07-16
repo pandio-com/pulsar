@@ -19,113 +19,76 @@
 
 package org.apache.pulsar.io.twitter.data;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
+
+import java.util.List;
 
 /**
  * POJO for Tweet object.
  */
 @Data
 public class TweetData {
+    @JsonProperty("created_at")
     private String createdAt;
     private Long id;
-    private String idStr;
     private String text;
-    private String source;
-    private Boolean truncated;
-    private User user;
-    private RetweetedStatus retweetedStatus;
-    private Boolean isQuoteStatus;
-    private Long quoteCount;
-    private Long replyCount;
-    private Long retweetCount;
-    private Long favoriteCount;
-    private Boolean favorited;
-    private Boolean retweeted;
-    private String filterLevel;
-    private String lang;
-    private String timestampMs;
-    private Delete delete;
+    @JsonProperty("author_id")
+    private String authorId;
+    @JsonProperty("in_reply_to_user_id")
+    private String inReplyToUserId;
+    @JsonProperty("referenced_tweets")
+    private List<ReferencedTweet> referencedTweets;
+    private Attachment attachments;
+    private String format;
+    private Entity entities;
 
     /**
-     * POJO for Twitter User object.
+     * POJO for ReferencedTweet object.
      */
     @Data
-    public static class User {
-        private Long id;
-        private String idStr;
-        private String name;
-        private String screenName;
-        private String location;
-        private String description;
-        private String translatorType;
-        private Boolean protectedUser;
-        private Boolean verified;
-        private Long followersCount;
-        private Long friendsCount;
-        private Long listedCount;
-        private Long favouritesCount;
-        private Long statusesCount;
-        private String createdAt;
-        private Boolean geoEnabled;
-        private String lang;
-        private Boolean contributorsEnabled;
-        private Boolean isTranslator;
-        private String profileBackgroundColor;
-        private String profileBackgroundImageUrl;
-        private String profileBackgroundImageUrlHttps;
-        private Boolean profileBackgroundTile;
-        private String profileLinkColor;
-        private String profileSidebarBorderColor;
-        private String profileSidebarFillColor;
-        private String profileTextColor;
-        private Boolean profileUseBackgroundImage;
-        private String profileImageUrl;
-        private String profileImageUrlHttps;
-        private String profileBannerUrl;
-        private Boolean defaultProfile;
-        private Boolean defaultProfileImage;
+    public static class ReferencedTweet {
+        private String type;
+        private String id;
     }
 
     /**
-     * POJO for Re-Tweet object.
+     * POJO for Attachment object.
      */
     @Data
-    public static class RetweetedStatus {
-        private String createdAt;
-        private Long id;
-        private String idStr;
-        private String text;
-        private String source;
-        private Boolean truncated;
-        private User user;
-        private Boolean isQuoteStatus;
-        private Long quoteCount;
-        private Long replyCount;
-        private Long retweetCount;
-        private Long favoriteCount;
-        private Boolean favorited;
-        private Boolean retweeted;
-        private String filterLevel;
-        private String lang;
+    public static class Attachment {
+        @JsonProperty("media_keys")
+        private List<String> mediaKeys;
+
     }
 
     /**
-     * POJO for Tweet Status object.
+     * POJO for Entity object.
      */
     @Data
-    public static class Status {
-        private Long id;
-        private String idStr;
-        private Long userId;
-        private String userIdStr;
+    public static class Entity {
+        private List<Url> urls;
+        private List<Mention> mentions;
     }
 
     /**
-     * POJO for Tweet Delete object.
+     * POJO for Url object.
      */
     @Data
-    public static class Delete {
-        private Status status;
-        private String timestampMs;
+    public static class Url {
+        private Integer start;
+        private Integer end;
+        private String url;
     }
+
+    /**
+     * POJO for Url object.
+     */
+    @Data
+    public static class Mention {
+        private Integer start;
+        private Integer end;
+        private String username;
+    }
+
 }

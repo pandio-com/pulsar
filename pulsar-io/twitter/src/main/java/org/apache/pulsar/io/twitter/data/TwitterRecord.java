@@ -30,11 +30,9 @@ import org.apache.pulsar.functions.api.Record;
 public class TwitterRecord implements Record<TweetData> {
     private final TweetData tweet;
     private static SimpleDateFormat dateFormat = new SimpleDateFormat("EEE MMM d HH:mm:ss Z yyyy");
-    private final boolean guestimateTweetTime;
 
-    public TwitterRecord(TweetData tweet, boolean guestimateTweetTime) {
+    public TwitterRecord(TweetData tweet) {
         this.tweet = tweet;
-        this.guestimateTweetTime = guestimateTweetTime;
     }
 
     @Override
@@ -49,10 +47,9 @@ public class TwitterRecord implements Record<TweetData> {
             if (tweet.getCreatedAt() != null) {
                 Date d = dateFormat.parse(tweet.getCreatedAt());
                 return Optional.of(d.toInstant().toEpochMilli());
-            } else if (guestimateTweetTime) {
+            }
+            else {
                 return Optional.of(System.currentTimeMillis());
-            } else {
-                return Optional.empty();
             }
         } catch (Exception e) {
             return Optional.empty();

@@ -49,9 +49,8 @@
     </dependency>
 
     <dependency>
-      <groupId>com.twitter</groupId>
-      <artifactId>hbc-core</artifactId>
-      <version>${hbc-core.version}</version>
+      <groupId>org.apache.httpcomponents</groupId>
+      <artifactId>httpclient</artifactId>
     </dependency>
     
     <dependency>
