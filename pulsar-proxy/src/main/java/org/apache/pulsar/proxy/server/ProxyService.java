@@ -96,6 +96,8 @@ public class ProxyService implements Closeable {
 
     protected static boolean isPandioBandwidthPublisherEnabled;
 
+    public static PandioPulsarZookeeperPublisher pandioPulsarZookeeperPublisher;
+
     private static final int numThreads = Runtime.getRuntime().availableProcessors();
 
     static final Gauge activeConnections = Gauge
@@ -138,6 +140,10 @@ public class ProxyService implements Closeable {
         }
 
         ProxyService.isPandioBandwidthPublisherEnabled = proxyConfig.isPandioBandwidthPublisherEnabled();
+
+        if( isPandioBandwidthPublisherEnabled ) {
+            pandioPulsarZookeeperPublisher = new PandioPulsarZookeeperPublisher(proxyConfig);
+        }
 
         this.acceptorGroup = EventLoopUtil.newEventLoopGroup(1, acceptorThreadFactory);
         this.workerGroup = EventLoopUtil.newEventLoopGroup(numThreads, workersThreadFactory);
@@ -212,7 +218,7 @@ public class ProxyService implements Closeable {
         }
     }
 
-    public ZooKeeperClientFactory getZooKeeperClientFactory() {
+    public ZooKeeperClientFactory   getZooKeeperClientFactory() {
         if (zkClientFactory == null) {
             zkClientFactory = new ZookeeperClientFactoryImpl();
         }

@@ -316,10 +316,10 @@ public class DirectProxyHandler {
                     }
                 }
                 if(ProxyService.isPandioBandwidthPublisherEnabled) {
-                    PandioBandwidthPublisher.inboundOutboundChannelMap.put(String.valueOf(outboundChannel.id()) , String.valueOf(inboundChannel.id()));
+                    PandioBandwidthHandler.inboundOutboundChannelMap.put(String.valueOf(outboundChannel.id()) , String.valueOf(inboundChannel.id()));
                     boolean isParserEnabled = ProxyService.proxyLogLevel == 1 || ProxyService.proxyLogLevel == 2;
-                    inboundChannel.pipeline().addBefore(isParserEnabled ? "inboundParser" : "handler", PandioBandwidthPublisher.HANDLER_NAME, new PandioBandwidthPublisher(config));
-                    outboundChannel.pipeline().addBefore(isParserEnabled ? "outboundParser" : "proxyOutboundHandler", PandioBandwidthPublisher.HANDLER_NAME, new PandioBandwidthPublisher(config));
+                    inboundChannel.pipeline().addBefore(isParserEnabled ? "inboundParser" : "handler", PandioBandwidthHandler.HANDLER_NAME, new PandioBandwidthHandler(config));
+                    outboundChannel.pipeline().addBefore(isParserEnabled ? "outboundParser" : "proxyOutboundHandler", PandioBandwidthHandler.HANDLER_NAME, new PandioBandwidthHandler(config));
                 }
                 // Start reading from both connections
                 inboundChannel.read();
