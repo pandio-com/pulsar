@@ -218,7 +218,7 @@ public class ProxyService implements Closeable {
         }
     }
 
-    public ZooKeeperClientFactory   getZooKeeperClientFactory() {
+    public ZooKeeperClientFactory getZooKeeperClientFactory() {
         if (zkClientFactory == null) {
             zkClientFactory = new ZookeeperClientFactoryImpl();
         }
