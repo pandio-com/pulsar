@@ -55,19 +55,19 @@ jobs:
           echo $PULSAR_VERSION
           gcloud auth configure-docker --quiet
           if [[ $CIRCLE_BRANCH = "pandio-dev" ]]; then
-            docker build -t $IMAGE:$VERSION-dev-$TAG ./ci-build
-            docker push $IMAGE:$VERSION-dev-$TAG
-            docker tag $IMAGE:$VERSION-dev-$TAG $IMAGE:dev
+            docker build -t $IMAGE:$PULSAR_VERSION-dev-$TAG ./ci-build
+            docker push $IMAGE:$PULSAR_VERSION-dev-$TAG
+            docker tag $IMAGE:$PULSAR_VERSION-dev-$TAG $IMAGE:dev
             docker push $IMAGE:dev
           elif [[ $CIRCLE_BRANCH = "pandio-stable" ]]; then
-            docker build -t $IMAGE:$VERSION-stable-$TAG ./ci-build
-            docker push $IMAGE:$VERSION-stable-$TAG
-            docker tag $IMAGE:$VERSION-stable-$TAG $IMAGE:stable
+            docker build -t $IMAGE:$PULSAR_VERSION-stable-$TAG ./ci-build
+            docker push $IMAGE:$PULSAR_VERSION-stable-$TAG
+            docker tag $IMAGE:$PULSAR_VERSION-stable-$TAG $IMAGE:stable
             docker push $IMAGE:stable
           fi
           if [[ $CIRCLE_BRANCH = "master" ]]; then
-            docker tag apachepulsar/pulsar-all:$VERSION $IMAGE:$VERSION-master-$TAG
-            docker push $IMAGE:$VERSION-master-$TAG
+            docker tag apachepulsar/pulsar-all:$PULSAR_VERSION $IMAGE:$PULSAR_VERSION-master-$TAG
+            docker push $IMAGE:$PULSAR_VERSION-master-$TAG
           fi
 
 workflows:
