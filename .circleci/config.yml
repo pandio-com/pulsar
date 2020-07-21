@@ -1,13 +1,13 @@
 aliases:
   - &restore-cache
     keys:
-      - caching-dependencies-{{ checksum "pom.xml" }}
-      - caching-dependencies-
+      - panpul-deps-{{ checksum "pom.xml" }}
+      - panpul-deps-
 
   - &save-cache
     paths:
       - /root/.m2
-    key: caching-dependencies-{{ checksum "pom.xml" }}
+    key: panpul-deps-{{ checksum "pom.xml" }}
 
 version: 2
 jobs:
@@ -51,21 +51,23 @@ jobs:
       - run: |
           IMAGE=gcr.io/$GOOGLE_PROJECT_ID/$CIRCLE_PROJECT_REPONAME
           TAG=$(git rev-parse --short HEAD)
+          VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+          echo $VERSION
           gcloud auth configure-docker --quiet
           if [[ $CIRCLE_BRANCH = "pandio-dev" ]]; then
-            docker build -t $IMAGE:2.5.2-dev-$TAG ./ci-build
-            docker push $IMAGE:2.5.2-dev-$TAG
-            docker tag $IMAGE:2.5.2-dev-$TAG $IMAGE:dev
+            docker build -t $IMAGE:$VERSION-dev-$TAG ./ci-build
+            docker push $IMAGE:$VERSION-dev-$TAG
+            docker tag $IMAGE:$VERSION-dev-$TAG $IMAGE:dev
             docker push $IMAGE:dev
           elif [[ $CIRCLE_BRANCH = "pandio-stable" ]]; then
-            docker build -t $IMAGE:2.5.2-stable-$TAG ./ci-build
-            docker push $IMAGE:2.5.2-stable-$TAG
-            docker tag $IMAGE:2.5.2-stable-$TAG $IMAGE:stable
+            docker build -t $IMAGE:$VERSION-stable-$TAG ./ci-build
+            docker push $IMAGE:$VERSION-stable-$TAG
+            docker tag $IMAGE:$VERSION-stable-$TAG $IMAGE:stable
             docker push $IMAGE:stable
           fi
           if [[ $CIRCLE_BRANCH = "master" ]]; then
-            docker tag apachepulsar/pulsar-all:2.5.2 $IMAGE:2.5.2-master-$TAG
-            docker push $IMAGE:2.5.2-master-$TAG
+            docker tag apachepulsar/pulsar-all:$VERSION $IMAGE:$VERSION-master-$TAG
+            docker push $IMAGE:$VERSION-master-$TAG
           fi
 
 workflows:
