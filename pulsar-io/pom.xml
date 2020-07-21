@@ -62,6 +62,7 @@
     <module>solr</module>
     <module>influxdb</module>
     <module>dynamodb</module>
+    <module>s3</module>
   </modules>
 
 </project>
