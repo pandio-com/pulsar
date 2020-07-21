@@ -36,6 +36,7 @@ import java.util.Map;
 import com.google.common.base.Strings;
 import lombok.extern.slf4j.Slf4j;
 
+import org.apache.http.ConnectionClosedException;
 import org.apache.http.HttpEntity;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.config.CookieSpecs;
@@ -83,11 +84,10 @@ public class TwitterConnector extends PushSource<TweetData> {
         TwitterConnectorConfig cfg = IOConfigUtils
                 .loadWithSecrets(config, TwitterConnectorConfig.class, sourceContext);
         cfg.validate();
-        String accessToken = getAccessToken(cfg);
         Thread streamRunner = new Thread(() -> {
             try {
                 running = true;
-                stream(accessToken);
+                stream(cfg);
             } catch (Exception e) {
                 throw new RuntimeException("Exception thrown: ", e);
             }
@@ -95,7 +95,8 @@ public class TwitterConnector extends PushSource<TweetData> {
         streamRunner.start();
     }
 
-    private void stream(String accessToken) throws IOException, URISyntaxException {
+    private void stream(TwitterConnectorConfig cfg) throws IOException, URISyntaxException {
+        String accessToken = getAccessToken(cfg);
         CloseableHttpClient httpClient = HttpClients.custom()
                 .setDefaultRequestConfig(RequestConfig.custom()
                         .setCookieSpec(CookieSpecs.STANDARD).build())
@@ -122,6 +123,9 @@ public class TwitterConnector extends PushSource<TweetData> {
                     consume(new TwitterRecord(tweet));
                     line = reader.readLine();
                 }
+            } catch (ConnectionClosedException e) {
+                LOG.info("Twitter closed the connection, reconnecting...");
+                stream(cfg);
             }
         }
 

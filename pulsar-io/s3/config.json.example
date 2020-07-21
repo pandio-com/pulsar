@@ -1,0 +1,10 @@
+{
+    "configs": {
+        "accessKeyId": "",
+        "secretAccessKey": "",
+        "region": "eu-north-1",
+        "bucketName": "vocooltweets",
+        "batchSize": 1000
+    }
+}
+
