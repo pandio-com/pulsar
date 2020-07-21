@@ -51,7 +51,7 @@ jobs:
       - run: |
           IMAGE=gcr.io/$GOOGLE_PROJECT_ID/$CIRCLE_PROJECT_REPONAME
           TAG=$(git rev-parse --short HEAD)
-          PULSAR_VERSION=$(ci-build/get-pom-version.sh)
+          export PULSAR_VERSION=$(ci-build/get-pom-version.sh)
           echo $PULSAR_VERSION
           gcloud auth configure-docker --quiet
           if [[ $CIRCLE_BRANCH = "pandio-dev" ]]; then

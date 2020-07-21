@@ -1,9 +1,9 @@
 FROM openjdk:8-jdk-slim as pulsar
 
-ARG PULSAR_VERSION=2.6.0
-ARG PULSAR_IO_DIR=apache-pulsar-io-connectors-${PULSAR_VERSION}-bin
-ARG PULSAR_OFFLOADER_TARBALL=apache-pulsar-offloaders-${PULSAR_VERSION}-bin.tar.gz
-ARG PULSAR_TARBALL=apache-pulsar-${PULSAR_VERSION}-bin.tar.gz
+ENV PULSAR_VERSION=2.6.0
+ENV PULSAR_IO_DIR=apache-pulsar-io-connectors-${PULSAR_VERSION}-bin
+ENV PULSAR_OFFLOADER_TARBALL=apache-pulsar-offloaders-${PULSAR_VERSION}-bin.tar.gz
+ENV PULSAR_TARBALL=apache-pulsar-${PULSAR_VERSION}-bin.tar.gz
 
 ADD ${PULSAR_TARBALL} /
 ADD ${PULSAR_IO_DIR} /pulsar/connectors
