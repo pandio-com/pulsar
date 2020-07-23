@@ -6,18 +6,11 @@ ENV PULSAR_OFFLOADER_TARBALL=apache-pulsar-offloaders-${PULSAR_VERSION}-bin.tar.
 ENV PULSAR_TARBALL=apache-pulsar-${PULSAR_VERSION}-bin.tar.gz
 
 ADD ${PULSAR_TARBALL} /
-ADD ${PULSAR_IO_DIR} /pulsar/connectors
+ADD ${PULSAR_IO_DIR} /pulsar/connectors/
 ADD ${PULSAR_OFFLOADER_TARBALL} /
 RUN mv /apache-pulsar-offloaders-*/offloaders /pulsar/offloaders
 
-COPY scripts/apply-config-from-env.py /pulsar/bin
-COPY scripts/gen-yml-from-env.py /pulsar/bin
-COPY scripts/generate-zookeeper-config.sh /pulsar/bin
-COPY scripts/pulsar-zookeeper-ruok.sh /pulsar/bin
-COPY scripts/watch-znode.py /pulsar/bin
-COPY scripts/set_python_version.sh /pulsar/bin
-# COPY scripts/install-pulsar-client-27.sh /pulsar/bin
-# COPY scripts/install-pulsar-client-37.sh /pulsar/bin
+COPY scripts/* /pulsar/bin/
 
 # Install some utilities
 RUN apt-get update \
