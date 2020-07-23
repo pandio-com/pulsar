@@ -1,16 +1,19 @@
-FROM openjdk:8-jdk-slim as pulsar
+FROM busybox as pulsar
 
 ENV PULSAR_VERSION=2.6.0
+ENV PULSAR_TARBALL=apache-pulsar-${PULSAR_VERSION}-bin.tar.gz
 ENV PULSAR_IO_DIR=apache-pulsar-io-connectors-${PULSAR_VERSION}-bin
 ENV PULSAR_OFFLOADER_TARBALL=apache-pulsar-offloaders-${PULSAR_VERSION}-bin.tar.gz
-ENV PULSAR_TARBALL=apache-pulsar-${PULSAR_VERSION}-bin.tar.gz
 
 ADD ${PULSAR_TARBALL} /
 ADD ${PULSAR_IO_DIR} /pulsar/connectors/
+RUN mv /apache-pulsar-* /pulsar
 ADD ${PULSAR_OFFLOADER_TARBALL} /
 RUN mv /apache-pulsar-offloaders-*/offloaders /pulsar/offloaders
 
 COPY scripts/* /pulsar/bin/
+
+FROM openjdk:8-jdk-slim
 
 # Install some utilities
 RUN apt-get update \
@@ -36,6 +39,7 @@ RUN echo networkaddress.cache.ttl=1 >> $JAVA_HOME/jre/lib/security/java.security
 #      && apt-get clean \
 #      && rm -rf /var/lib/apt/lists/*
 
+COPY --from=pulsar /pulsar /pulsar
 WORKDIR /pulsar
 
 VOLUME  ["/pulsar/conf", "/pulsar/data"]
