@@ -6,8 +6,8 @@ ENV PULSAR_IO_DIR=apache-pulsar-io-connectors-${PULSAR_VERSION}-bin
 ENV PULSAR_OFFLOADER_TARBALL=apache-pulsar-offloaders-${PULSAR_VERSION}-bin.tar.gz
 
 ADD ${PULSAR_TARBALL} /
+RUN mv /apache-pulsar-* /pulsar
 ADD ${PULSAR_IO_DIR} /pulsar/connectors/
-RUN mv -T /apache-pulsar-* /pulsar
 ADD ${PULSAR_OFFLOADER_TARBALL} /
 RUN mv /apache-pulsar-offloaders-*/offloaders /pulsar/offloaders
 
