@@ -859,6 +859,11 @@ public class ServiceConfiguration implements PulsarConfiguration {
     private boolean authorizationAllowWildcardsMatching = false;
 
     @FieldContext(
+            category = CATEGORY_AUTHORIZATION,
+            doc = "Enable log for Pandio Authorization Provider")
+    private boolean isPandioAuthorizationLogEnabled = false;
+
+    @FieldContext(
         category = CATEGORY_AUTHENTICATION,
         dynamic = true,
         doc = "Authentication settings of the broker itself. \n\nUsed when the broker connects"
