@@ -298,7 +298,7 @@ public class PandioPulsarAuthorizationProvider implements AuthorizationProvider 
     @NoArgsConstructor
     @AllArgsConstructor
     public static class Permissions {
-        private Boolean isSuperAdmin;
+        private boolean isSuperAdmin = false;
         private List<String> a;
         private List<String> c;
         private List<String> p;
