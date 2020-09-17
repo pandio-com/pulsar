@@ -59,6 +59,7 @@ public class PandioPulsarAuthorizationProvider implements AuthorizationProvider 
     public ServiceConfiguration conf;
     public ConfigurationCacheService configCache;
     private JwtParser parser;
+    private JwtParser parserForDebug;
     private String clusterName;
 
 
@@ -78,6 +79,10 @@ public class PandioPulsarAuthorizationProvider implements AuthorizationProvider 
         this.clusterName = conf.getClusterName();
         this.configCache = configCache;
         this.parser = getJWTParser(conf);
+        if (conf.isPandioAuthorizationLogEnabled()) {
+            this.parserForDebug = getJWTParser(conf);
+        }
+
     }
 
 
@@ -246,6 +251,12 @@ public class PandioPulsarAuthorizationProvider implements AuthorizationProvider 
                 .build();
     }
 
+    private JwtParser getJWTParserForDebug(ServiceConfiguration conf) throws IOException {
+        return Jwts.parserBuilder()
+                .setSigningKey(getValidationKey(conf, getPublicKeyAlgType(conf)))
+                .build();
+    }
+
     // When symmetric key is configured
     final static String CONF_TOKEN_SECRET_KEY = "tokenSecretKey";
 
@@ -354,7 +365,7 @@ public class PandioPulsarAuthorizationProvider implements AuthorizationProvider 
         }
 
         private CompletableFuture<Boolean> check(List<String> l, String tenantName) {
-            if (StringUtils.isBlank(tenantName)) {
+            if (StringUtils.isBlank(tenantName) || l == null) {
                 return CompletableFuture.completedFuture(false);
             }
             return CompletableFuture.completedFuture(
@@ -364,7 +375,7 @@ public class PandioPulsarAuthorizationProvider implements AuthorizationProvider 
         }
 
         private CompletableFuture<Boolean> check(List<String> l, NamespaceName namespaceName) throws ExecutionException, InterruptedException {
-            if (namespaceName == null) {
+            if (namespaceName == null || l == null) {
                 return CompletableFuture.completedFuture(false);
             }
             return CompletableFuture.completedFuture(
@@ -375,7 +386,7 @@ public class PandioPulsarAuthorizationProvider implements AuthorizationProvider 
         }
 
         private CompletableFuture<Boolean> check(List<String> l, TopicName topicName) throws ExecutionException, InterruptedException {
-            if (topicName == null) {
+            if (topicName == null || l == null) {
                 return CompletableFuture.completedFuture(false);
             }
             return CompletableFuture.completedFuture(
@@ -412,7 +423,7 @@ public class PandioPulsarAuthorizationProvider implements AuthorizationProvider 
      */
     private String getClusterClaimAsRawJSON(AuthenticationDataSource authenticationDataSource) throws AuthenticationException {
         return Optional.ofNullable(AuthenticationProviderToken.getToken(authenticationDataSource))
-                .map(parser::parse)
+                .map(parserForDebug::parse)
                 .map(jwt -> (Jwt<?, Claims>) jwt)
                 .map(Jwt::getBody)
                 .map(body -> {
