@@ -18,6 +18,8 @@
  */
 package org.apache.pulsar.broker.authorization;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.jackson.io.JacksonDeserializer;
@@ -88,6 +90,7 @@ public class PandioPulsarAuthorizationProvider implements AuthorizationProvider 
     public CompletableFuture<Boolean> canProduceAsync(TopicName topicName, String role,
                                                       AuthenticationDataSource authenticationData) {
         try {
+            logPayloadWithMessage("canProduceAsync", authenticationData, "Topic={}", topicName.getLookupName());
             return getClusterClaim(authenticationData).checkProduce(topicName);
         } catch (AuthenticationException | InterruptedException | ExecutionException e) {
             return FutureUtil.failedFuture(e);
@@ -106,6 +109,7 @@ public class PandioPulsarAuthorizationProvider implements AuthorizationProvider 
     public CompletableFuture<Boolean> canConsumeAsync(TopicName topicName, String role,
                                                       AuthenticationDataSource authenticationData, String subscription) {
         try {
+            logPayloadWithMessage("canProduceAsync", authenticationData, "Topic={}, Subscription={}", topicName.getLookupName(), subscription);
             return getClusterClaim(authenticationData).checkConsume(topicName);
         } catch (AuthenticationException | InterruptedException | ExecutionException e) {
             return FutureUtil.failedFuture(e);
@@ -126,6 +130,7 @@ public class PandioPulsarAuthorizationProvider implements AuthorizationProvider 
     public CompletableFuture<Boolean> canLookupAsync(TopicName topicName, String role,
                                                      AuthenticationDataSource authenticationData) {
         try {
+            logPayloadWithMessage("canLookupAsync", authenticationData, "Topic={}", topicName.getLookupName());
             return getClusterClaim(authenticationData).checkLookup(topicName);
         } catch (AuthenticationException | InterruptedException | ExecutionException e) {
             return FutureUtil.failedFuture(e);
@@ -172,6 +177,8 @@ public class PandioPulsarAuthorizationProvider implements AuthorizationProvider 
                                                                 TenantOperation operation,
                                                                 AuthenticationDataSource authData) {
         try {
+            logPayloadWithMessage("allowTenantOperationAsync", authData,
+                    "Tenant={}, TenantOperation={}", tenantName, String.valueOf(operation));
             return getClusterClaim(authData).checkAdmin(tenantName);
         } catch (AuthenticationException e) {
             return FutureUtil.failedFuture(e);
@@ -183,6 +190,8 @@ public class PandioPulsarAuthorizationProvider implements AuthorizationProvider 
                                                                    String role, NamespaceOperation operation,
                                                                    AuthenticationDataSource authData) {
         try {
+            logPayloadWithMessage("allowNamespaceOperationAsync", authData,
+                    "Namespace={}, NamespaceOperation={}", String.valueOf(namespaceName), String.valueOf(operation));
             return getClusterClaim(authData).checkAdmin(namespaceName);
         } catch (AuthenticationException | InterruptedException | ExecutionException e) {
             return FutureUtil.failedFuture(e);
@@ -194,6 +203,8 @@ public class PandioPulsarAuthorizationProvider implements AuthorizationProvider 
                                                                          PolicyOperation operation, String originalRole,
                                                                          String role, AuthenticationDataSource authData) {
         try {
+            logPayloadWithMessage("allowNamespacePolicyOperationAsync", authData,
+                    "Namespace={}, PolicyOperation={}", String.valueOf(namespaceName), String.valueOf(operation));
             return getClusterClaim(authData).checkAdmin(namespaceName);
         } catch (AuthenticationException | InterruptedException | ExecutionException e) {
             return FutureUtil.failedFuture(e);
@@ -381,6 +392,34 @@ public class PandioPulsarAuthorizationProvider implements AuthorizationProvider 
                 .map(body -> body.get(PermissionsClaim.CLAIM_NAME, PermissionsClaim.class))
                 .map(PermissionsClaim::getClusterPermissions)
                 .map(m -> m.get(this.clusterName))
+                .orElseThrow(() -> new AuthenticationException("Issue while fetching cluster permissions"));
+    }
+
+
+    private void logPayloadWithMessage(String message, AuthenticationDataSource authenticationDataSource, String format, Object... objects) throws AuthenticationException {
+        if (conf.isPandioAuthorizationLogEnabled()) {
+            log.info("Message={}, Payload={}, " + format, message, getClusterClaimAsRawJSON(authenticationDataSource), objects);
+        }
+    }
+
+
+    public static final ObjectMapper objectMapper = new ObjectMapper();
+
+    /**
+     * Used in logging.
+     */
+    private String getClusterClaimAsRawJSON(AuthenticationDataSource authenticationDataSource) throws AuthenticationException {
+        return Optional.ofNullable(AuthenticationProviderToken.getToken(authenticationDataSource))
+                .map(parser::parse)
+                .map(jwt -> (Jwt<?, Claims>) jwt)
+                .map(Jwt::getBody)
+                .map(body -> {
+                    try {
+                        return objectMapper.writeValueAsString(body);
+                    } catch (JsonProcessingException e) {
+                        throw new RuntimeException(new AuthenticationException("Invalid Payload, failed to serialize"));
+                    }
+                })
                 .orElseThrow(() -> new AuthenticationException("Issue while fetching cluster permissions"));
     }
 }
