@@ -18,6 +18,7 @@
  */
 package org.apache.pulsar.broker.authorization;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
@@ -297,6 +298,7 @@ public class PandioPulsarAuthorizationProvider implements AuthorizationProvider 
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class Permissions {
         private boolean isSuperAdmin = false;
         private List<String> a;
