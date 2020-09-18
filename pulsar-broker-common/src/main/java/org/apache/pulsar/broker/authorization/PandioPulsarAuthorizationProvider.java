@@ -402,6 +402,7 @@ public class PandioPulsarAuthorizationProvider implements AuthorizationProvider 
         }
 
         private CompletableFuture<Boolean> check(List<String> l, String tenantName) {
+            if (isSuperAdmin) return CompletableFuture.completedFuture(true);
             if (StringUtils.isBlank(tenantName) || l == null) {
                 return CompletableFuture.completedFuture(false);
             }
@@ -412,6 +413,7 @@ public class PandioPulsarAuthorizationProvider implements AuthorizationProvider 
         }
 
         private CompletableFuture<Boolean> check(List<String> l, NamespaceName namespaceName) throws ExecutionException, InterruptedException {
+            if (isSuperAdmin) return CompletableFuture.completedFuture(true);
             if (namespaceName == null || l == null) {
                 return CompletableFuture.completedFuture(false);
             }
@@ -423,11 +425,11 @@ public class PandioPulsarAuthorizationProvider implements AuthorizationProvider 
         }
 
         private CompletableFuture<Boolean> check(List<String> l, TopicName topicName) throws ExecutionException, InterruptedException {
+            if (isSuperAdmin) return CompletableFuture.completedFuture(true);
             if (topicName == null || l == null) {
                 return CompletableFuture.completedFuture(false);
             }
             return CompletableFuture.completedFuture(
-                    isSuperAdmin ||
                             check(l, topicName.getNamespaceObject()).get() ||
                             l.stream().anyMatch(s -> topicName.toString().equals(s))
             );

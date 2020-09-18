@@ -20,6 +20,8 @@ public class PandioPulsarAuthorizationProviderTest {
         assertTrue(sut.checkAdmin("gib").get());
         assertTrue(sut.checkAdmin(NamespaceName.get("public", "default" )).get());
         assertTrue(sut.checkAdmin(TopicName.get("persistent", "public", "default", "test")).get());
+        assertTrue(sut.checkProduce(TopicName.get("persistent", "public", "default", "test")).get());
+        assertTrue(sut.checkConsume(TopicName.get("persistent", "public", "default", "test")).get());
     }
 
     @Test
