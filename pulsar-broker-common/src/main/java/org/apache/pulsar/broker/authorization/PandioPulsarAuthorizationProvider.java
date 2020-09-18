@@ -99,7 +99,7 @@ public class PandioPulsarAuthorizationProvider implements AuthorizationProvider 
                                                       AuthenticationDataSource authenticationData) {
         try {
             val ret = getClusterClaim(authenticationData).checkProduce(topicName).get();
-            logPayloadWithMessage("canProduceAsync", authenticationData, "Topic={}; Returned={}", topicName.getLookupName(), ret);
+            logPayloadWithMessage("canProduceAsync", authenticationData, "Topic={}; Returned={}", topicName.getLookupName(), String.valueOf(ret));
             return CompletableFuture.completedFuture(ret);
         } catch (AuthenticationException | InterruptedException | ExecutionException e) {
             return FutureUtil.failedFuture(e);
@@ -119,7 +119,7 @@ public class PandioPulsarAuthorizationProvider implements AuthorizationProvider 
                                                       AuthenticationDataSource authenticationData, String subscription) {
         try {
             val ret = getClusterClaim(authenticationData).checkConsume(topicName).get();
-            logPayloadWithMessage("canConsumeAsync", authenticationData, "Topic={}, Subscription={}, Returned={}", topicName.getLookupName(), subscription, ret);
+            logPayloadWithMessage("canConsumeAsync", authenticationData, "Topic={}, Subscription={}, Returned={}", topicName.getLookupName(), subscription, String.valueOf(ret));
             return CompletableFuture.completedFuture(ret);
         } catch (AuthenticationException | InterruptedException | ExecutionException e) {
             return FutureUtil.failedFuture(e);
@@ -141,7 +141,7 @@ public class PandioPulsarAuthorizationProvider implements AuthorizationProvider 
                                                      AuthenticationDataSource authenticationData) {
         try {
             val ret = getClusterClaim(authenticationData).checkLookup(topicName).get();
-            logPayloadWithMessage("canLookupAsync", authenticationData, "Topic={}, Returned={}", topicName.getLookupName(), ret);
+            logPayloadWithMessage("canLookupAsync", authenticationData, "Topic={}, Returned={}", topicName.getLookupName(), String.valueOf(ret));
             return CompletableFuture.completedFuture(ret);
         } catch (AuthenticationException | InterruptedException | ExecutionException e) {
             return FutureUtil.failedFuture(e);
@@ -186,7 +186,7 @@ public class PandioPulsarAuthorizationProvider implements AuthorizationProvider 
     public CompletableFuture<Boolean> isSuperUser(String role, AuthenticationDataSource authenticationData, ServiceConfiguration serviceConfiguration) {
         try {
             val ret = getClusterClaim(authenticationData).isSuperAdmin();
-            logPayloadWithMessage("isSuperUser", authenticationData, "Returned={}", ret);
+            logPayloadWithMessage("isSuperUser", authenticationData, "Returned={}", String.valueOf(ret));
             return CompletableFuture.completedFuture(ret);
         } catch (AuthenticationException e) {
             return FutureUtil.failedFuture(e);
@@ -197,7 +197,7 @@ public class PandioPulsarAuthorizationProvider implements AuthorizationProvider 
     public CompletableFuture<Boolean> isTenantAdmin(String tenant, String role, TenantInfo tenantInfo, AuthenticationDataSource authenticationData) {
         try {
             val ret = getClusterClaim(authenticationData).checkAdmin(tenant).get();
-            logPayloadWithMessage("isTenantAdmin", authenticationData, "Tenant={}, Returned={}", tenant, ret);
+            logPayloadWithMessage("isTenantAdmin", authenticationData, "Tenant={}, Returned={}", tenant, String.valueOf(ret));
             return CompletableFuture.completedFuture(ret);
         } catch (AuthenticationException | InterruptedException | ExecutionException e) {
             return FutureUtil.failedFuture(e);
@@ -216,7 +216,7 @@ public class PandioPulsarAuthorizationProvider implements AuthorizationProvider 
         try {
             val ret = getClusterClaim(authData).checkAdmin(tenantName).get();
             logPayloadWithMessage("allowTenantOperationAsync", authData,
-                    "Tenant={}, TenantOperation={}, Returned={}", tenantName, String.valueOf(operation), ret);
+                    "Tenant={}, TenantOperation={}, Returned={}", tenantName, String.valueOf(operation), String.valueOf(ret));
             return CompletableFuture.completedFuture(ret);
         } catch (AuthenticationException | InterruptedException | ExecutionException e) {
             return FutureUtil.failedFuture(e);
@@ -230,8 +230,7 @@ public class PandioPulsarAuthorizationProvider implements AuthorizationProvider 
         try {
             val ret = getClusterClaim(authData).checkAdmin(namespaceName).get();
             logPayloadWithMessage("allowNamespaceOperationAsync", authData,
-                    "Namespace={}, NamespaceOperation={}, Returned={}" +
-                            "", String.valueOf(namespaceName), String.valueOf(operation), ret);
+                    "Namespace={}, NamespaceOperation={}, Returned={}", String.valueOf(namespaceName), String.valueOf(operation), String.valueOf(ret));
 
             return CompletableFuture.completedFuture(ret);
         } catch (AuthenticationException | InterruptedException | ExecutionException e) {
@@ -246,7 +245,7 @@ public class PandioPulsarAuthorizationProvider implements AuthorizationProvider 
         try {
             val ret = getClusterClaim(authData).checkAdmin(namespaceName).get();
             logPayloadWithMessage("allowNamespacePolicyOperationAsync", authData,
-                    "Namespace={}, PolicyOperation={}, Returned={}", String.valueOf(namespaceName), String.valueOf(operation), ret);
+                    "Namespace={}, PolicyOperation={}, Returned={}", String.valueOf(namespaceName), String.valueOf(operation), String.valueOf(ret));
             return CompletableFuture.completedFuture(ret);
         } catch (AuthenticationException | InterruptedException | ExecutionException e) {
             return FutureUtil.failedFuture(e);
