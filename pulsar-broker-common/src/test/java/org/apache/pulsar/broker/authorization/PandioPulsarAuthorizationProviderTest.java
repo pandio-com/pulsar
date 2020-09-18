@@ -44,4 +44,11 @@ public class PandioPulsarAuthorizationProviderTest {
         assertTrue(sut.checkProduce(NamespaceName.get("public", "default" )).get());
         assertTrue(sut.checkProduce(TopicName.get("persistent", "public", "default", "test")).get());
     }
+
+    @Test
+    public void testConsumerAccess() throws ExecutionException, InterruptedException {
+        val sut = new PandioPulsarAuthorizationProvider.Permissions(false, null, Collections.singletonList("public/default"),null);
+        assertTrue(sut.checkConsume(TopicName.get("persistent://public/default/sample-test")).get());
+        assertFalse(sut.checkProduce(TopicName.get("persistent://public/default/sample-test")).get());
+    }
 }

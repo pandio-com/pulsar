@@ -29,6 +29,7 @@ import io.jsonwebtoken.security.SignatureException;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.val;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.pulsar.broker.ServiceConfiguration;
 import org.apache.pulsar.broker.authentication.AuthenticationDataSource;
@@ -97,8 +98,9 @@ public class PandioPulsarAuthorizationProvider implements AuthorizationProvider 
     public CompletableFuture<Boolean> canProduceAsync(TopicName topicName, String role,
                                                       AuthenticationDataSource authenticationData) {
         try {
-            logPayloadWithMessage("canProduceAsync", authenticationData, "Topic={}", topicName.getLookupName());
-            return getClusterClaim(authenticationData).checkProduce(topicName);
+            val ret = getClusterClaim(authenticationData).checkProduce(topicName).get();
+            logPayloadWithMessage("canProduceAsync", authenticationData, "Topic={}; Returned={}", topicName.getLookupName(), ret);
+            return CompletableFuture.completedFuture(ret);
         } catch (AuthenticationException | InterruptedException | ExecutionException e) {
             return FutureUtil.failedFuture(e);
         }
@@ -116,8 +118,9 @@ public class PandioPulsarAuthorizationProvider implements AuthorizationProvider 
     public CompletableFuture<Boolean> canConsumeAsync(TopicName topicName, String role,
                                                       AuthenticationDataSource authenticationData, String subscription) {
         try {
-            logPayloadWithMessage("canConsumeAsync", authenticationData, "Topic={}, Subscription={}", topicName.getLookupName(), subscription);
-            return getClusterClaim(authenticationData).checkConsume(topicName);
+            val ret = getClusterClaim(authenticationData).checkConsume(topicName).get();
+            logPayloadWithMessage("canConsumeAsync", authenticationData, "Topic={}, Subscription={}, Returned={}", topicName.getLookupName(), subscription, ret);
+            return CompletableFuture.completedFuture(ret);
         } catch (AuthenticationException | InterruptedException | ExecutionException e) {
             return FutureUtil.failedFuture(e);
         }
@@ -137,8 +140,9 @@ public class PandioPulsarAuthorizationProvider implements AuthorizationProvider 
     public CompletableFuture<Boolean> canLookupAsync(TopicName topicName, String role,
                                                      AuthenticationDataSource authenticationData) {
         try {
-            logPayloadWithMessage("canLookupAsync", authenticationData, "Topic={}", topicName.getLookupName());
-            return getClusterClaim(authenticationData).checkLookup(topicName);
+            val ret = getClusterClaim(authenticationData).checkLookup(topicName).get();
+            logPayloadWithMessage("canLookupAsync", authenticationData, "Topic={}, Returned={}", topicName.getLookupName(), ret);
+            return CompletableFuture.completedFuture(ret);
         } catch (AuthenticationException | InterruptedException | ExecutionException e) {
             return FutureUtil.failedFuture(e);
         }
@@ -181,8 +185,9 @@ public class PandioPulsarAuthorizationProvider implements AuthorizationProvider 
     @Override
     public CompletableFuture<Boolean> isSuperUser(String role, AuthenticationDataSource authenticationData, ServiceConfiguration serviceConfiguration) {
         try {
-            logPayloadWithMessage("isSuperUser", authenticationData, "" );
-            return CompletableFuture.completedFuture(getClusterClaim(authenticationData).isSuperAdmin());
+            val ret = getClusterClaim(authenticationData).isSuperAdmin();
+            logPayloadWithMessage("isSuperUser", authenticationData, "Returned={}", ret);
+            return CompletableFuture.completedFuture(ret);
         } catch (AuthenticationException e) {
             return FutureUtil.failedFuture(e);
         }
@@ -191,9 +196,10 @@ public class PandioPulsarAuthorizationProvider implements AuthorizationProvider 
     @Override
     public CompletableFuture<Boolean> isTenantAdmin(String tenant, String role, TenantInfo tenantInfo, AuthenticationDataSource authenticationData) {
         try {
-            logPayloadWithMessage("isTenantAdmin", authenticationData, "Tenant={}", tenant );
-            return getClusterClaim(authenticationData).checkAdmin(tenant);
-        } catch (AuthenticationException e) {
+            val ret = getClusterClaim(authenticationData).checkAdmin(tenant).get();
+            logPayloadWithMessage("isTenantAdmin", authenticationData, "Tenant={}, Returned={}", tenant, ret);
+            return CompletableFuture.completedFuture(ret);
+        } catch (AuthenticationException | InterruptedException | ExecutionException e) {
             return FutureUtil.failedFuture(e);
         }
     }
@@ -208,10 +214,11 @@ public class PandioPulsarAuthorizationProvider implements AuthorizationProvider 
                                                                 TenantOperation operation,
                                                                 AuthenticationDataSource authData) {
         try {
+            val ret = getClusterClaim(authData).checkAdmin(tenantName).get();
             logPayloadWithMessage("allowTenantOperationAsync", authData,
-                    "Tenant={}, TenantOperation={}", tenantName, String.valueOf(operation));
-            return getClusterClaim(authData).checkAdmin(tenantName);
-        } catch (AuthenticationException e) {
+                    "Tenant={}, TenantOperation={}, Returned={}", tenantName, String.valueOf(operation), ret);
+            return CompletableFuture.completedFuture(ret);
+        } catch (AuthenticationException | InterruptedException | ExecutionException e) {
             return FutureUtil.failedFuture(e);
         }
     }
@@ -221,9 +228,12 @@ public class PandioPulsarAuthorizationProvider implements AuthorizationProvider 
                                                                    String role, NamespaceOperation operation,
                                                                    AuthenticationDataSource authData) {
         try {
+            val ret = getClusterClaim(authData).checkAdmin(namespaceName).get();
             logPayloadWithMessage("allowNamespaceOperationAsync", authData,
-                    "Namespace={}, NamespaceOperation={}", String.valueOf(namespaceName), String.valueOf(operation));
-            return getClusterClaim(authData).checkAdmin(namespaceName);
+                    "Namespace={}, NamespaceOperation={}, Returned={}" +
+                            "", String.valueOf(namespaceName), String.valueOf(operation), ret);
+
+            return CompletableFuture.completedFuture(ret);
         } catch (AuthenticationException | InterruptedException | ExecutionException e) {
             return FutureUtil.failedFuture(e);
         }
@@ -234,9 +244,10 @@ public class PandioPulsarAuthorizationProvider implements AuthorizationProvider 
                                                                          PolicyOperation operation, String originalRole,
                                                                          String role, AuthenticationDataSource authData) {
         try {
+            val ret = getClusterClaim(authData).checkAdmin(namespaceName).get();
             logPayloadWithMessage("allowNamespacePolicyOperationAsync", authData,
-                    "Namespace={}, PolicyOperation={}", String.valueOf(namespaceName), String.valueOf(operation));
-            return getClusterClaim(authData).checkAdmin(namespaceName);
+                    "Namespace={}, PolicyOperation={}, Returned={}", String.valueOf(namespaceName), String.valueOf(operation), ret);
+            return CompletableFuture.completedFuture(ret);
         } catch (AuthenticationException | InterruptedException | ExecutionException e) {
             return FutureUtil.failedFuture(e);
         }
