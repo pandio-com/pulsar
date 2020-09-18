@@ -19,6 +19,7 @@
 package org.apache.pulsar.broker.authorization;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
@@ -115,7 +116,7 @@ public class PandioPulsarAuthorizationProvider implements AuthorizationProvider 
     public CompletableFuture<Boolean> canConsumeAsync(TopicName topicName, String role,
                                                       AuthenticationDataSource authenticationData, String subscription) {
         try {
-            logPayloadWithMessage("canProduceAsync", authenticationData, "Topic={}, Subscription={}", topicName.getLookupName(), subscription);
+            logPayloadWithMessage("canConsumeAsync", authenticationData, "Topic={}, Subscription={}", topicName.getLookupName(), subscription);
             return getClusterClaim(authenticationData).checkConsume(topicName);
         } catch (AuthenticationException | InterruptedException | ExecutionException e) {
             return FutureUtil.failedFuture(e);
@@ -172,6 +173,30 @@ public class PandioPulsarAuthorizationProvider implements AuthorizationProvider 
         throw new UnsupportedOperationException("Revoke Subscription Permissions is not Supported");
     }
 
+    @Override
+    public CompletableFuture<Boolean> isSuperUser(String role, ServiceConfiguration serviceConfiguration) {
+        throw new UnsupportedOperationException("isSuperUser with role only is not Supported");
+    }
+
+    @Override
+    public CompletableFuture<Boolean> isSuperUser(String role, AuthenticationDataSource authenticationData, ServiceConfiguration serviceConfiguration) {
+        try {
+            logPayloadWithMessage("isSuperUser", authenticationData, "" );
+            return CompletableFuture.completedFuture(getClusterClaim(authenticationData).isSuperAdmin());
+        } catch (AuthenticationException e) {
+            return FutureUtil.failedFuture(e);
+        }
+    }
+
+    @Override
+    public CompletableFuture<Boolean> isTenantAdmin(String tenant, String role, TenantInfo tenantInfo, AuthenticationDataSource authenticationData) {
+        try {
+            logPayloadWithMessage("isTenantAdmin", authenticationData, "Tenant={}", tenant );
+            return getClusterClaim(authenticationData).checkAdmin(tenant);
+        } catch (AuthenticationException e) {
+            return FutureUtil.failedFuture(e);
+        }
+    }
 
     @Override
     public void close() throws IOException {
@@ -311,7 +336,8 @@ public class PandioPulsarAuthorizationProvider implements AuthorizationProvider 
     @AllArgsConstructor
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static class Permissions {
-        private boolean isSuperAdmin = false;
+        @JsonProperty(value = "isSuperAdmin", defaultValue = "false")
+        private boolean isSuperAdmin;
         private List<String> a;
         private List<String> c;
         private List<String> p;
