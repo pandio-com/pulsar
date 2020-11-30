@@ -119,6 +119,7 @@ import org.apache.pulsar.client.admin.PulsarAdmin;
 import org.apache.pulsar.client.admin.PulsarAdminBuilder;
 
 import org.apache.pulsar.client.api.ClientBuilder;
+import org.apache.pulsar.client.api.ProxyProtocol;
 import org.apache.pulsar.client.api.PulsarClient;
 import org.apache.pulsar.client.api.PulsarClientException;
 import org.apache.pulsar.client.impl.ClientBuilderImpl;
@@ -863,9 +864,11 @@ public class BrokerService implements Closeable, ZooKeeperCacheListener<Policies
                             pulsar.getConfiguration().getBrokerClientAuthenticationParameters());
                 }
                 if (pulsar.getConfiguration().isBrokerClientTlsEnabled()) {
+                    String url = isNotBlank(data.getBrokerServiceUrlTls()) ? data.getBrokerServiceUrlTls()
+                                    : data.getServiceUrlTls();
                     clientBuilder
-                            .serviceUrl(isNotBlank(data.getBrokerServiceUrlTls()) ? data.getBrokerServiceUrlTls()
-                                    : data.getServiceUrlTls())
+                            .serviceUrl(url)
+                            .proxyServiceUrl(url, ProxyProtocol.SNI)
                             .enableTls(true)
                             .allowTlsInsecureConnection(pulsar.getConfiguration().isTlsAllowInsecureConnection());
                     if (pulsar.getConfiguration().isBrokerClientTlsEnabledWithKeyStore()) {
