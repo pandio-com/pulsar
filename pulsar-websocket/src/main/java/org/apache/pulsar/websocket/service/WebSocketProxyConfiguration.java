@@ -117,6 +117,7 @@ public class WebSocketProxyConfiguration implements PulsarConfiguration {
     private boolean tlsEnabled = false;
 
     private boolean brokerClientTlsEnabled = false;
+    private boolean replicationTlsEnabled = false;
     // Path for the TLS certificate file
     private String tlsCertificateFilePath;
     // Path for the TLS private key file
@@ -128,7 +129,7 @@ public class WebSocketProxyConfiguration implements PulsarConfiguration {
     // Specify whether Client certificates are required for TLS
     // Reject the Connection if the Client Certificate is not trusted.
     private boolean tlsRequireTrustedClientCertOnConnect = false;
-    // Tls cert refresh duration in seconds (set 0 to check on every new connection) 
+    // Tls cert refresh duration in seconds (set 0 to check on every new connection)
     private long tlsCertRefreshCheckDurationSec = 300;
 
     private Properties properties = new Properties();
