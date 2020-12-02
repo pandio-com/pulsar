@@ -37,7 +37,7 @@ def get_version():
     root = ET.XML(open(POM_PATH).read())
     version = root.find('{http://maven.apache.org/POM/4.0.0}version').text.strip()
 
-    if use_full_pom_name:    
+    if use_full_pom_name:
         return version
     else:
         # Strip the '-incubating' suffix, since it prevents the packages
@@ -48,6 +48,11 @@ def get_version():
 def get_name():
     postfix = environ.get('NAME_POSTFIX', '')
     base = 'pulsar-client'
+    return base + postfix
+
+def get_name():
+    postfix = environ.get('NAME_POSTFIX', '')
+    base = 'pulsar-client-pandio'
     return base + postfix
 
 VERSION = get_version()
@@ -73,7 +78,7 @@ class my_build_ext(build_ext.build_ext):
 
 dependencies = [
     'fastavro',
-    'grpcio',
+    'grpcio<1.26.0,>=1.8.2',
     'protobuf>=3.6.1',
     'six',
     'certifi',
