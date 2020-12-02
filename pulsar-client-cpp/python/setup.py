@@ -50,6 +50,11 @@ def get_name():
     base = 'pulsar-client'
     return base + postfix
 
+def get_name():
+    postfix = environ.get('NAME_POSTFIX', '')
+    base = 'pulsar-client-pandio'
+    return base + postfix
+
 VERSION = get_version()
 NAME = get_name()
 
