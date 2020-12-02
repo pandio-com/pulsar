@@ -177,6 +177,8 @@ ClientConnection::ClientConnection(const std::string& logicalAddress, const std:
 #else
         boost::asio::ssl::context ctx(executor_->io_service_, boost::asio::ssl::context::tlsv1_client);
 #endif
+        Url service_url;
+        Url::parse(physicalAddress, service_url);
         if (clientConfiguration.isTlsAllowInsecureConnection()) {
             ctx.set_verify_mode(boost::asio::ssl::context::verify_none);
             isTlsAllowInsecureConnection_ = true;
@@ -184,8 +186,6 @@ ClientConnection::ClientConnection(const std::string& logicalAddress, const std:
             ctx.set_verify_mode(boost::asio::ssl::context::verify_peer);
 
             if (clientConfiguration.isValidateHostName()) {
-                Url service_url;
-                Url::parse(physicalAddress, service_url);
                 LOG_DEBUG("Validating hostname for " << service_url.host() << ":" << service_url.port());
                 ctx.set_verify_callback(boost::asio::ssl::rfc2818_verification(physicalAddress));
             }
@@ -233,6 +233,14 @@ ClientConnection::ClientConnection(const std::string& logicalAddress, const std:
         }
 
         tlsSocket_ = executor_->createTlsSocket(socket_, ctx);
+
+        LOG_DEBUG("Pandio TLS SNI: " << service_url.host());
+        if(! SSL_set_tlsext_host_name(tlsSocket_->native_handle(), service_url.host().c_str()))
+        {
+            boost::system::error_code ec{static_cast<int>(::ERR_get_error()), boost::asio::error::get_ssl_category()};
+            LOG_ERROR(boost::system::system_error{ec}.what() << ": Error while setting TLS SNI");
+            return;
+        }
     }
 }
 
