@@ -112,6 +112,7 @@ public class WebSocketProxyConfiguration implements PulsarConfiguration {
     private boolean tlsEnabled = false;
 
     private boolean brokerClientTlsEnabled = false;
+    private boolean replicationTlsEnabled = false;
     // Path for the TLS certificate file
     private String tlsCertificateFilePath;
     // Path for the TLS private key file
@@ -380,6 +381,14 @@ public class WebSocketProxyConfiguration implements PulsarConfiguration {
 
     public void setBrokerClientTlsEnabled(boolean brokerClientTlsEnabled) {
         this.brokerClientTlsEnabled = brokerClientTlsEnabled;
+    }
+
+    public boolean isReplicationTlsEnabled() {
+        return replicationTlsEnabled;
+    }
+
+    public void setReplicationTlsEnabled(boolean replicationTlsEnabled) {
+        this.replicationTlsEnabled = replicationTlsEnabled;
     }
 
     public String getTlsCertificateFilePath() {
