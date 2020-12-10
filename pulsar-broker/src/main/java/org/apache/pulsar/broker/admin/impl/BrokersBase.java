@@ -253,7 +253,6 @@ public class BrokersBase extends AdminResource {
         @ApiResponse(code = 404, message = "Cluster doesn't exist"),
         @ApiResponse(code = 500, message = "Internal server error")})
     public void healthcheck(@Suspended AsyncResponse asyncResponse) throws Exception {
-        validateSuperUserAccess();
         String heartbeatNamespace = NamespaceService.getHeartbeatNamespace(
                 pulsar().getAdvertisedAddress(), pulsar().getConfiguration());
         String topic = String.format("persistent://%s/healthcheck", heartbeatNamespace);
