@@ -99,6 +99,10 @@ public class AuthenticationService implements Closeable {
     }
 
     public String authenticateHttpRequest(HttpServletRequest request) throws AuthenticationException {
+        // Bypass authentication of health check
+        if (request.getRequestURI().endsWith("/admin/v2/brokers/health")) {
+            return "<none>";
+        }
         // Try to validate with any configured provider
         AuthenticationException authenticationException = null;
         AuthenticationDataSource authData = new AuthenticationDataHttps(request);

@@ -210,6 +210,10 @@ public class AuthenticationProviderSasl implements AuthenticationProvider {
      */
     @Override
     public boolean authenticateHttpRequest(HttpServletRequest request, HttpServletResponse response) throws Exception {
+        // Bypass authentication of health check
+        if (request.getRequestURI().endsWith("/admin/v2/brokers/health")) {
+            return true;
+        }
         AuthenticationState state = getAuthState(request);
         String saslAuthRoleToken = authRoleFromHttpRequest(request);
 
