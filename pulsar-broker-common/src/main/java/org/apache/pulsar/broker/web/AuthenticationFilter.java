@@ -71,7 +71,11 @@ public class AuthenticationFilter implements Filter {
         try {
             HttpServletRequest httpRequest = (HttpServletRequest) request;
             HttpServletResponse httpResponse = (HttpServletResponse) response;
-
+            // Bypass authentication of health check
+            if (httpRequest.getRequestURI().endsWith("/admin/v2/brokers/health")) {
+                chain.doFilter(request, response);
+                return;
+            }
             if (!isSaslRequest(httpRequest)) {
                 // not sasl type, return role directly.
                 String role = authenticationService.authenticateHttpRequest((HttpServletRequest) request);
