@@ -1,6 +1,8 @@
 FROM busybox as pulsar
 
-ENV PULSAR_VERSION=2.6.0
+ARG PULSAR_VERSION
+
+ENV PULSAR_VERSION=$PULSAR_VERSION
 ENV PULSAR_TARBALL=apache-pulsar-${PULSAR_VERSION}-bin.tar.gz
 ENV PULSAR_IO_DIR=apache-pulsar-io-connectors-${PULSAR_VERSION}-bin
 ENV PULSAR_OFFLOADER_TARBALL=apache-pulsar-offloaders-${PULSAR_VERSION}-bin.tar.gz
