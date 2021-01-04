@@ -64,6 +64,11 @@ jobs:
             docker push $IMAGE:$PULSAR_VERSION-stable-$TAG
             docker tag $IMAGE:$PULSAR_VERSION-stable-$TAG $IMAGE:stable
             docker push $IMAGE:stable
+          elif [[ $CIRCLE_BRANCH = "vo-debug" ]]; then
+            docker build --build-arg PULSAR_VERSION -t $IMAGE:$PULSAR_VERSION-vo-debug-$TAG ./ci-build
+            docker push $IMAGE:$PULSAR_VERSION-vo-debug-$TAG
+            docker tag $IMAGE:$PULSAR_VERSION-vo-debug-$TAG $IMAGE:vo-debug
+            docker push $IMAGE:vo-debug
           fi
           if [[ $CIRCLE_BRANCH = "master" ]]; then
             docker tag apachepulsar/pulsar-all:$PULSAR_VERSION $IMAGE:$PULSAR_VERSION-master-$TAG
@@ -80,3 +85,4 @@ workflows:
               only:
                 - pandio-dev
                 - pandio-stable
+                - vo-debug
