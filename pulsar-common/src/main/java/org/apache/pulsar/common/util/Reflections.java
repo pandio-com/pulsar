@@ -74,7 +74,6 @@ public class Reflections {
             throw new RuntimeException(userClassName + " does not implement " + xface.getName());
         }
         Class<T> tCls = (Class<T>) theCls.asSubclass(xface);
-        System.out.println(tCls.getName());
         T result;
         try {
             Constructor<T> meth = (Constructor<T>) constructorCache.get(theCls);
