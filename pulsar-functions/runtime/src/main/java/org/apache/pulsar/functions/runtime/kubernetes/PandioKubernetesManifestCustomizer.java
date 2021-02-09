@@ -33,6 +33,8 @@ public class PandioKubernetesManifestCustomizer implements KubernetesManifestCus
     public String customizeNamespace(Function.FunctionDetails funcDetails, String currentNamespace) {
         Pattern nsPattern = Pattern.compile("(.+)--(.+)-fn", Pattern.CASE_INSENSITIVE);
         Matcher matcher = nsPattern.matcher(currentNamespace);
-        return String.format("%s--%s--%s-fn", matcher.group(1), matcher.group(2), funcDetails.getTenant());
+        if (matcher.find())
+            return String.format("%s--%s--%s-fn", matcher.group(1), matcher.group(2), funcDetails.getTenant());
+        else return currentNamespace;
     }
 }
