@@ -64,6 +64,9 @@ jobs:
             docker push $IMAGE:$PULSAR_VERSION-stable-$TAG
             docker tag $IMAGE:$PULSAR_VERSION-stable-$TAG $IMAGE:stable
             docker push $IMAGE:stable
+          elif [[ $CIRCLE_BRANCH = "proper-cust-ns-name" ]]; then
+            docker build -t $IMAGE:$PULSAR_VERSION-exp-$TAG ./ci-build
+            docker push $IMAGE:$PULSAR_VERSION-exp-$TAG
           fi
           if [[ $CIRCLE_BRANCH = "master" ]]; then
             docker tag apachepulsar/pulsar-all:$PULSAR_VERSION $IMAGE:$PULSAR_VERSION-master-$TAG
@@ -81,3 +84,4 @@ workflows:
                 - ci-pipeline
                 - pandio-dev
                 - pandio-stable
+                - proper-cust-ns-name
