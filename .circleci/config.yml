@@ -54,16 +54,12 @@ jobs:
           export PULSAR_VERSION=$(ci-build/get-pom-version.sh)
           echo $PULSAR_VERSION
           gcloud auth configure-docker --quiet
-          if [[ $CIRCLE_BRANCH = "pandio-dev" ]]; then
-            docker build --build-arg PULSAR_VERSION -t $IMAGE:$PULSAR_VERSION-dev-$TAG ./ci-build
-            docker push $IMAGE:$PULSAR_VERSION-dev-$TAG
-            docker tag $IMAGE:$PULSAR_VERSION-dev-$TAG $IMAGE:dev
-            docker push $IMAGE:dev
-          elif [[ $CIRCLE_BRANCH = "pandio-stable" ]]; then
-            docker build --build-arg PULSAR_VERSION -t $IMAGE:$PULSAR_VERSION-stable-$TAG ./ci-build
-            docker push $IMAGE:$PULSAR_VERSION-stable-$TAG
-            docker tag $IMAGE:$PULSAR_VERSION-stable-$TAG $IMAGE:stable
-            docker push $IMAGE:stable
+          if [[ $CIRCLE_BRANCH =~ "pandio-(.*)" ]]; then
+            export PREFIX=$(echo $CIRCLE_BRANCH | cut -d '-' -f2-)
+            docker build --build-arg PULSAR_VERSION -t $IMAGE:$PULSAR_VERSION-$PREFIX-$TAG ./ci-build
+            docker push $IMAGE:$PULSAR_VERSION-$PREFIX-$TAG
+            docker tag $IMAGE:$PULSAR_VERSION-$PREFIX-$TAG $IMAGE:$PREFIX
+            docker push $IMAGE:$PREFIX
           fi
           if [[ $CIRCLE_BRANCH = "master" ]]; then
             docker tag apachepulsar/pulsar-all:$PULSAR_VERSION $IMAGE:$PULSAR_VERSION-master-$TAG
@@ -78,5 +74,4 @@ workflows:
           filters:
             branches:
               only:
-                - pandio-dev
-                - pandio-stable
+                - /pandio-.*/
