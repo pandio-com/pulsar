@@ -1,7 +1,7 @@
 package org.apache.pulsar.functions.runtime.kubernetes;
 
-import io.kubernetes.client.models.V1Service;
-import io.kubernetes.client.models.V1StatefulSet;
+import io.kubernetes.client.openapi.models.V1Service;
+import io.kubernetes.client.openapi.models.V1StatefulSet;
 import org.apache.pulsar.functions.proto.Function;
 
 import java.util.Map;
