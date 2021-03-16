@@ -27,7 +27,7 @@ RUN apt-get update \
      && apt-get clean \
      && rm -rf /var/lib/apt/lists/*
 
-RUN curl https://bootstrap.pypa.io/2.7/get-pip.py --output get-pip.py
+RUN curl https://bootstrap.pypa.io/3.7/get-pip.py --output get-pip.py
 RUN python3.7 get-pip.py
 
 
