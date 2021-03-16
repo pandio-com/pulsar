@@ -54,7 +54,7 @@ jobs:
           export PULSAR_VERSION=$(ci-build/get-pom-version.sh)
           echo $PULSAR_VERSION
           gcloud auth configure-docker --quiet
-          if [[ $CIRCLE_BRANCH =~ "pandio-(.*)" ]]; then
+          if [[ $CIRCLE_BRANCH =~ pandio-(.*) ]]; then
             export PREFIX=$(echo $CIRCLE_BRANCH | cut -d '-' -f2-)
             docker build --build-arg PULSAR_VERSION -t $IMAGE:$PULSAR_VERSION-$PREFIX-$TAG ./ci-build
             docker push $IMAGE:$PULSAR_VERSION-$PREFIX-$TAG
